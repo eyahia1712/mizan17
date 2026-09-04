@@ -1,0 +1,230 @@
+/**
+ * Shared parts of the wallet.
+ *
+ * The wallet is a self-contained surface: its own icon set, its own dark
+ * palette, its own idea of a screen. None of it inherits from the Mizan
+ * design system and none of it leaks back — every class is under .tw.
+ */
+
+import { useState } from 'react';
+
+/* ------------------------------------------------------------------ */
+/* Icons — filled, 24-grid, heavier than the Mizan set on purpose      */
+/* ------------------------------------------------------------------ */
+
+const svg = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true };
+
+export const IcSend    = (p) => <svg {...svg} {...p}><path d="M12 19V5M5 12l7-7 7 7" /></svg>;
+export const IcReceive = (p) => <svg {...svg} {...p}><path d="M12 5v14M19 12l-7 7-7-7" /></svg>;
+export const IcBuy     = (p) => <svg {...svg} {...p}><path d="M12 5v14M5 12h14" /></svg>;
+export const IcSell    = (p) => <svg {...svg} {...p}><path d="M4 8h16M4 8l4-4M20 16H4m16 0-4 4" /></svg>;
+export const IcBack    = (p) => <svg {...svg} {...p}><path d="m15 18-6-6 6-6" /></svg>;
+export const IcNext    = (p) => <svg {...svg} {...p}><path d="m9 18 6-6-6-6" /></svg>;
+export const IcDown    = (p) => <svg {...svg} {...p}><path d="m6 9 6 6 6-6" /></svg>;
+export const IcCopy    = (p) => <svg {...svg} {...p}><rect x="9" y="9" width="11" height="11" rx="2.5" /><path d="M15 5.5A2.5 2.5 0 0 0 12.5 4H6a2 2 0 0 0-2 2v6.5A2.5 2.5 0 0 0 6.5 15" /></svg>;
+export const IcCheck   = (p) => <svg {...svg} {...p}><path d="M20 6 9 17l-5-5" /></svg>;
+export const IcClose   = (p) => <svg {...svg} {...p}><path d="M18 6 6 18M6 6l12 12" /></svg>;
+export const IcHome    = (p) => <svg {...svg} {...p}><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z" /></svg>;
+export const IcClock   = (p) => <svg {...svg} {...p}><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 1.8" /></svg>;
+export const IcCard    = (p) => <svg {...svg} {...p}><rect x="2.5" y="5" width="19" height="14" rx="2.5" /><path d="M2.5 10h19" /></svg>;
+export const IcBank    = (p) => <svg {...svg} {...p}><path d="M3 9.5 12 4l9 5.5M5.5 10v8M18.5 10v8M12 10v8M3 20h18" /></svg>;
+export const IcStack   = (p) => <svg {...svg} {...p}><path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 13 9 5 9-5" /></svg>;
+export const IcGear    = (p) => <svg {...svg} {...p}><circle cx="12" cy="12" r="3.2" /><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-2.8-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 15H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.1-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 9 4.6V4a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5.9Z" /></svg>;
+export const IcQr      = (p) => <svg {...svg} {...p}><rect x="3.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="13.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="3.5" y="13.5" width="7" height="7" rx="1.5" /><path d="M13.5 13.5h3v3m4 0v4h-4v-3" /></svg>;
+export const IcShield  = (p) => <svg {...svg} {...p}><path d="M12 3.5 5 6.2v5.4c0 4.2 2.9 7.6 7 8.9 4.1-1.3 7-4.7 7-8.9V6.2z" /><path d="m9 12 2.2 2.2L15.5 10" /></svg>;
+export const IcEye     = (p) => <svg {...svg} {...p}><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="3" /></svg>;
+
+/** The Sui mark: a droplet, white on Sui blue. */
+export const SuiMark = ({ size = 40 }) => (
+  <span className="tw-coin" style={{ width: size, height: size }} aria-hidden="true">
+    <svg viewBox="0 0 24 24" width={size * 0.58} height={size * 0.58}>
+      <path
+        fill="#fff"
+        d="M12 2.6c.9 1.3 5.9 7.1 5.9 11.1A5.9 5.9 0 0 1 6.1 13.7C6.1 9.7 11.1 3.9 12 2.6Zm0 3.3c-1.4 2-3.6 5.3-3.6 7.8a3.6 3.6 0 1 0 7.2 0c0-2.5-2.2-5.8-3.6-7.8Z"
+      />
+    </svg>
+  </span>
+);
+
+/* ------------------------------------------------------------------ */
+/* Screen shell                                                        */
+/* ------------------------------------------------------------------ */
+
+export function Screen({ title, onBack, right, children, foot }) {
+  return (
+    <div className="tw-screen">
+      <header className="tw-bar">
+        {onBack ? (
+          <button className="tw-icon-btn" onClick={onBack} aria-label="Back"><IcBack width={22} height={22} /></button>
+        ) : <span className="tw-icon-btn tw-icon-btn--ghost" />}
+        <h2>{title}</h2>
+        <span className="tw-bar-right">{right ?? <span className="tw-icon-btn tw-icon-btn--ghost" />}</span>
+      </header>
+
+      <div className="tw-body">{children}</div>
+      {foot && <div className="tw-foot">{foot}</div>}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Pieces                                                              */
+/* ------------------------------------------------------------------ */
+
+export const Detail = ({ label, value, strong }) => (
+  <div className={`tw-detail${strong ? ' strong' : ''}`}>
+    <span>{label}</span>
+    <span>{value}</span>
+  </div>
+);
+
+export function CopyField({ label, value, lines = false }) {
+  const [done, setDone] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      setDone(true);
+      setTimeout(() => setDone(false), 1800);
+    } catch {
+      setDone(false);
+    }
+  }
+
+  return (
+    <div className="tw-copyfield">
+      {label && <span className="tw-label">{label}</span>}
+      <div className={`tw-copyrow${lines ? ' wrap' : ''}`}>
+        <span className="tw-hash">{value}</span>
+        <button className="tw-icon-btn" onClick={copy} aria-label={done ? 'Copied' : 'Copy'}>
+          {done ? <IcCheck width={18} height={18} /> : <IcCopy width={18} height={18} />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** The big number every entry screen is built around. */
+export function AmountField({ value, onChange, unit = 'SUI', sub, max, onMax, error, autoFocus }) {
+  return (
+    <div className="tw-amount-wrap">
+      <div className={`tw-amount${error ? ' bad' : ''}`}>
+        <input
+          inputMode="decimal"
+          autoComplete="off"
+          placeholder="0"
+          value={value}
+          onChange={(e) => onChange(e.target.value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1'))}
+          aria-label={`Amount in ${unit}`}
+          autoFocus={autoFocus}
+        />
+        <span className="tw-amount-unit">{unit}</span>
+      </div>
+
+      <div className="tw-amount-foot">
+        <span className={error ? 'tw-bad' : undefined}>{error ?? sub}</span>
+        {onMax && <button className="tw-max" onClick={onMax}>Max {max}</button>}
+      </div>
+    </div>
+  );
+}
+
+export function MethodRow({ mark, title, sub, on, onClick, right }) {
+  return (
+    <button className={`tw-method${on ? ' on' : ''}`} onClick={onClick} aria-pressed={on}>
+      <span className="tw-method-mark">{mark}</span>
+      <span className="tw-method-body">
+        <span className="tw-method-t">{title}</span>
+        {sub && <span className="tw-method-s">{sub}</span>}
+      </span>
+      {right ?? <span className="tw-radio" data-on={String(!!on)} aria-hidden="true" />}
+    </button>
+  );
+}
+
+/** The end of every flow. One shape, so success always reads the same. */
+export function Success({ title, amount, sub, details, onDone, doneLabel = 'Done' }) {
+  return (
+    <div className="tw-success">
+      <span className="tw-tick" aria-hidden="true"><IcCheck width={30} height={30} /></span>
+      <h3>{title}</h3>
+      <p className="tw-success-amt">{amount}</p>
+      {sub && <p className="tw-success-sub">{sub}</p>}
+
+      {details?.length > 0 && (
+        <div className="tw-details">
+          {details.map((d) => <Detail key={d.label} {...d} />)}
+        </div>
+      )}
+
+      <button className="tw-btn" onClick={onDone}>{doneLabel}</button>
+    </div>
+  );
+}
+
+/**
+ * A deterministic price line. Same address, same shape — a chart that
+ * reshuffled on every render would read as decoration, not data.
+ *
+ * Drawn in ink, not in green or red: the direction is already stated by the
+ * signed figure above it, and a second hue saying the same thing would be a
+ * colour doing no job.
+ */
+export function Sparkline({ seed = 'sui', points = 40, up = true }) {
+  let x = 0;
+  for (let i = 0; i < seed.length; i++) x = (x * 31 + seed.charCodeAt(i)) >>> 0;
+
+  const ys = [];
+  let v = 50;
+  for (let i = 0; i < points; i++) {
+    x ^= x << 13; x >>>= 0;
+    x ^= x >>> 17;
+    x ^= x << 5;  x >>>= 0;
+    v += ((x % 100) - 46) * 0.7 + (up ? 0.55 : -0.55);
+    ys.push(Math.max(6, Math.min(94, v)));
+  }
+
+  const step = 100 / (points - 1);
+  const d = ys.map((y, i) => `${i ? 'L' : 'M'}${(i * step).toFixed(2)} ${(100 - y).toFixed(2)}`).join(' ');
+
+  return (
+    <svg className="tw-spark" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <path d={`${d} L100 100 L0 100 Z`} fill="#111110" opacity=".07" />
+      <path d={d} fill="none" stroke="#111110" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
+/** Stands in for a scannable code without pulling in a QR dependency. */
+export function QrBlock({ value = '', size = 21, px = 196 }) {
+  let seed = 0;
+  for (let i = 0; i < value.length; i++) seed = (seed * 31 + value.charCodeAt(i)) >>> 0;
+
+  const cells = [];
+  let x = seed || 1;
+  for (let i = 0; i < size * size; i++) {
+    x ^= x << 13; x >>>= 0;
+    x ^= x >>> 17;
+    x ^= x << 5;  x >>>= 0;
+    cells.push(x % 100 < 46);
+  }
+
+  const finder = (r, c) =>
+    (r < 5 && c < 5) || (r < 5 && c >= size - 5) || (r >= size - 5 && c < 5);
+  const hole = (r, c) =>
+    (r >= 1 && r <= 3 && c >= 1 && c <= 3) ||
+    (r >= 1 && r <= 3 && c >= size - 4 && c <= size - 2) ||
+    (r >= size - 4 && r <= size - 2 && c >= 1 && c <= 3);
+
+  return (
+    <svg width={px} height={px} viewBox={`0 0 ${size} ${size}`} role="img" aria-label="Wallet address code">
+      <rect width={size} height={size} fill="#FAF9F5" />
+      {cells.map((on, i) => {
+        const r = Math.floor(i / size);
+        const c = i % size;
+        const dark = finder(r, c) ? !hole(r, c) : on;
+        return dark ? <rect key={i} x={c} y={r} width="1" height="1" fill="#111110" /> : null;
+      })}
+    </svg>
+  );
+}

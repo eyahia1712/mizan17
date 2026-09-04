@@ -1,0 +1,221 @@
+/**
+ * Google sign-in, as a popup.
+ *
+ * The popup is opened synchronously inside the click handler — that is the only
+ * way browsers allow it — so the provisioning sequence can play in the main
+ * window while the account chooser is up. The popup lands back on this same
+ * origin, posts the ID token to its opener and closes itself.
+ *
+ * What this gives us: the real account the person picked — their name, email and
+ * stable Google subject id. The subject id is what the Sui address is derived
+ * from, so the same Gmail always produces the same wallet.
+ *
+ * What it does NOT do: verify the token signature. That needs Google's JWKS and
+ * belongs on a server. The token arrives directly from Google over TLS and
+ * `state` guards the round trip, which is the right posture for a prototype with
+ * no backend — but it is not authentication you would ship.
+ */
+
+const CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '').trim();
+const AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
+const CHANNEL = 'mizan-oauth';
+
+export const googleConfigured = () => CLIENT_ID.length > 0;
+
+/** Must match a redirect URI registered on the OAuth client, exactly. */
+export const redirectUri = () => `${window.location.origin}/`;
+
+function randomToken() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function decodeJwtPayload(token) {
+  const part = token.split('.')[1];
+  if (!part) throw new Error('Malformed token.');
+  const json = decodeURIComponent(
+    atob(part.replace(/-/g, '+').replace(/_/g, '/'))
+      .split('')
+      .map((c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))
+      .join('')
+  );
+  return JSON.parse(json);
+}
+
+/**
+ * Run inside the popup, before React mounts. Returns true when this page load
+ * is an OAuth landing, in which case the document must not render the app.
+ */
+export function handlePopupCallback() {
+  if (!window.opener || window.opener === window) return false;
+
+  const params = new URLSearchParams(window.location.hash.slice(1));
+  const idToken = params.get('id_token');
+  const error = params.get('error');
+  if (!idToken && !error) return false;
+
+  window.opener.postMessage(
+    { source: CHANNEL, idToken, error, state: params.get('state') },
+    window.location.origin
+  );
+  window.close();
+  return true;
+}
+
+/**
+ * Open Google's account chooser and resolve with the chosen profile.
+ * Must be called directly from a click handler or the popup is blocked.
+ */
+export function signInWithGoogle() {
+  const state = randomToken();
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    redirect_uri: redirectUri(),
+    response_type: 'id_token',
+    scope: 'openid email profile',
+    nonce: randomToken(),
+    state,
+    prompt: 'select_account',
+  });
+
+  const w = 480;
+  const h = 640;
+  const left = window.screenX + Math.max(0, (window.outerWidth - w) / 2);
+  const top = window.screenY + Math.max(0, (window.outerHeight - h) / 3);
+
+  const popup = window.open(
+    `${AUTH_ENDPOINT}?${params}`,
+    'mizan-google',
+    `width=${w},height=${h},left=${Math.round(left)},top=${Math.round(top)}`
+  );
+
+  if (!popup) {
+    return Promise.reject(new Error('Your browser blocked the sign-in window. Allow pop-ups for this site and try again.'));
+  }
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+
+    function finish(fn, arg) {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener('message', onMessage);
+      clearInterval(watch);
+      try { popup.close(); } catch { /* already gone */ }
+      fn(arg);
+    }
+
+    function onMessage(event) {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.source !== CHANNEL) return;
+
+      const { idToken, error, state: got } = event.data;
+      if (error) return finish(reject, new Error(describe(error)));
+      if (got !== state) return finish(reject, new Error('Sign-in could not be verified. Please try again.'));
+
+      try {
+        const claims = decodeJwtPayload(idToken);
+        if (!claims.sub) throw new Error('Google did not return an account id.');
+        finish(resolve, {
+          sub: claims.sub,
+          name: claims.name || claims.email || 'Account holder',
+          email: claims.email || '',
+        });
+      } catch {
+        finish(reject, new Error('The sign-in response could not be read.'));
+      }
+    }
+
+    // The popup being dismissed is not an event we get told about.
+    const watch = setInterval(() => {
+      if (popup.closed) finish(reject, new Error('Sign-in was cancelled.'));
+    }, 400);
+
+    window.addEventListener('message', onMessage);
+  });
+}
+
+function describe(code) {
+  if (code === 'access_denied') return 'Sign-in was cancelled.';
+  if (code === 'redirect_uri_mismatch') {
+    return `This origin is not registered on the OAuth client. Add ${redirectUri()} to its authorised redirect URIs.`;
+  }
+  return `Google returned an error (${code}).`;
+}
+
+/* ------------------------------------------------------------------ */
+/* The account chooser, without a client id                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A web page cannot read the Google accounts signed in on the device — only
+ * Google can show you those, and only through a real OAuth client. So the app
+ * takes both paths:
+ *
+ *   • With VITE_GOOGLE_CLIENT_ID set, `signInWithGoogle()` above opens the
+ *     genuine chooser and the accounts listed are whatever is on the device.
+ *   • Without it, the app shows its own chooser over this list, which is
+ *     seeded below and then remembered in localStorage as accounts are added.
+ *
+ * Edit SEED_ACCOUNTS to change which accounts a fresh browser starts with.
+ */
+const SEED_ACCOUNTS = [
+  { name: 'Eya Hia',  email: 'kham3782@gmail.com' },
+  { name: 'Eya Hia',  email: 'eyahia.dev@gmail.com' },
+];
+
+const ACCOUNTS_KEY = 'mizan.accounts';
+
+/** Same email, same subject id — so the same Sui address every time. */
+export const subjectFor = (email) => `g:${String(email).trim().toLowerCase()}`;
+
+const shape = (a) => ({
+  name: (a.name || '').trim() || a.email,
+  email: (a.email || '').trim(),
+  sub: subjectFor(a.email),
+});
+
+export function deviceAccounts() {
+  let saved = [];
+  try {
+    saved = JSON.parse(localStorage.getItem(ACCOUNTS_KEY) ?? '[]');
+  } catch {
+    /* unreadable or unavailable — fall back to the seed alone */
+  }
+
+  const list = [...SEED_ACCOUNTS, ...(Array.isArray(saved) ? saved : [])]
+    .filter((a) => a && a.email)
+    .map(shape);
+
+  // Last write wins, so re-adding an account renames it rather than duplicating.
+  const byEmail = new Map(list.map((a) => [a.email.toLowerCase(), a]));
+  return [...byEmail.values()];
+}
+
+export function rememberAccount(account) {
+  const next = shape(account);
+  try {
+    const saved = JSON.parse(localStorage.getItem(ACCOUNTS_KEY) ?? '[]');
+    const kept = (Array.isArray(saved) ? saved : [])
+      .filter((a) => a?.email?.toLowerCase() !== next.email.toLowerCase());
+    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify([...kept, next]));
+  } catch {
+    /* non-fatal: the account still works for this session */
+  }
+  return next;
+}
+
+export function forgetAccount(email) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ACCOUNTS_KEY) ?? '[]');
+    localStorage.setItem(
+      ACCOUNTS_KEY,
+      JSON.stringify((Array.isArray(saved) ? saved : []).filter(
+        (a) => a?.email?.toLowerCase() !== String(email).toLowerCase()
+      ))
+    );
+  } catch {
+    /* non-fatal */
+  }
+}
