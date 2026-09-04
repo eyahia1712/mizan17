@@ -1,0 +1,812 @@
+/* ============================================================
+   MIZAN — design tokens
+
+   Swiss editorial. Paper, ink, vermillion, saffron, stone.
+   Large type, hard colour blocks, flat fills, no gradients
+   and no shadows.
+
+   The rule that makes it work: COLOUR ALWAYS DOES A JOB, and
+   the same hue never means two things.
+     ink         you, your account, the primary action
+     vermillion  money leaving, and the live state
+     saffron     a settled event
+     stone       every neutral surface and line
+   ============================================================ */
+
+:root {
+  --paper:#FAF9F5;
+  --paper-2:#F2F0E9;
+  --ink:#111110;
+  --ink-2:#5C5A54;
+  --ink-3:#8A877E;
+
+  --stone:#EAE8E1;
+  --hairline:#DCD9D0;
+
+  --vermillion:#E03A17;         /* fills and display type only */
+  --vermillion-text:#8F2308;    /* the same job at body size, legibly */
+  --vermillion-tint:#FBE2DB;
+  --saffron:#FFC300;            /* fill only — never text on paper */
+  --saffron-deep:#3D2E00;
+  --saffron-mid:#5C4700;
+
+  --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+  --arabic:'IBM Plex Sans Arabic',var(--sans);
+  --mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,monospace;
+
+  --s1:4px;  --s2:8px;  --s3:12px; --s4:16px;
+  --s5:24px; --s6:32px; --s7:48px; --s8:64px;
+
+  --radius:6px;
+  --radius-lg:8px;
+  --gutter:22px;
+
+  /* Two deliberate measures. The landing is a poster and stays narrow; the
+     account page needs room for a card beside a chart. */
+  --maxw-landing:820px;
+  --maxw-app:1040px;
+}
+
+/* Commit to light. This gets demonstrated on a projector and printed for
+   judges; a dark theme is a consumer signal working against the direction. */
+@media (prefers-color-scheme:dark) { :root { color-scheme:light; } }
+
+/* ---------- reset ---------- */
+*, *::before, *::after { box-sizing:border-box; }
+html, body, #root { margin:0; padding:0; height:100%; }
+
+body {
+  background:var(--paper-2);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:15px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+
+/* Type gets big and it gets tight. Timid type is what makes a
+   colourful design look amateur. */
+h1, h2, h3, h4 { margin:0; font-weight:500; letter-spacing:-.02em; line-height:1.15; }
+h1 { font-size:clamp(40px,7vw,76px); line-height:1.02; letter-spacing:-.035em; }
+h2 { font-size:clamp(24px,3vw,34px); letter-spacing:-.025em; }
+h3 { font-size:19px; letter-spacing:-.025em; }
+p  { margin:0; }
+em { font-style:normal; color:var(--vermillion); }
+
+a { color:var(--vermillion-text); text-decoration:none; }
+button { font-family:inherit; font-size:inherit; cursor:pointer; border:0; background:none; color:inherit; }
+input { font-family:inherit; font-size:inherit; color:inherit; }
+
+:focus-visible { outline:2px solid var(--vermillion); outline-offset:2px; }
+::selection { background:var(--vermillion); color:#fff; }
+
+.num  { font-variant-numeric:tabular-nums; }
+.mono { font-family:var(--mono); }
+
+/* ---------- type utilities ---------- */
+.eyebrow {
+  font-size:11px; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--ink-3); font-weight:500; line-height:1.4;
+}
+.micro { font-size:11.5px; }
+.faint { color:var(--ink-3); }
+
+/* ============================================================
+   WRAPPER
+   ============================================================ */
+
+.wrap { width:100%; max-width:var(--maxw-landing); margin:0 auto; padding:0 28px; }
+
+/* ============================================================
+   LANDING — full width, the same rhythm as the wordmark page
+   ============================================================ */
+
+.landing { min-height:100%; display:flex; flex-direction:column; background:var(--paper); }
+
+.landing-top {
+  display:flex; justify-content:space-between; align-items:center;
+  gap:var(--s3); padding-top:22px; padding-bottom:22px;
+  flex-wrap:wrap;
+}
+
+.landing-body {
+  flex:1;
+  display:flex; flex-direction:column; justify-content:center;
+  padding-top:var(--s7); padding-bottom:var(--s8);
+}
+
+.hero-mark { display:flex; align-items:baseline; gap:var(--s4); flex-wrap:wrap; margin-bottom:26px; }
+.hero-mark .latin  { font-size:34px; font-weight:500; letter-spacing:.02em; }
+.hero-mark .rule   { width:1px; height:28px; background:var(--hairline); align-self:center; }
+.hero-mark .arabic { font-family:var(--arabic); font-size:34px; }
+
+.hero-claim { max-width:16ch; }
+.hero-sub { margin-top:22px; font-size:17px; line-height:1.6; color:var(--ink-2); max-width:52ch; }
+.hero-cta { display:flex; gap:10px; margin-top:30px; flex-wrap:wrap; }
+.hero-err { max-width:52ch; margin-top:var(--s4); margin-bottom:0; }
+
+.landing .steps { margin-top:var(--s5); max-width:340px; }
+
+/* Blocks that almost touch look like a mistake; blocks that touch look like a
+   decision — so the gap is deliberate, not incidental. */
+.strip {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(190px,100%),1fr));
+  gap:var(--s4);
+  margin-top:52px;
+}
+.cell {
+  padding:20px 22px;
+  min-height:124px;
+  display:flex; flex-direction:column; justify-content:flex-end;
+}
+.cell .v { font-size:38px; font-weight:500; line-height:1; letter-spacing:-.025em; }
+.cell .l { font-size:13px; line-height:1.4; margin-top:10px; }
+
+.cell--v { background:var(--vermillion); color:#fff; }
+.cell--v .l { color:#FBD9D0; }
+.cell--s { background:var(--saffron); color:var(--saffron-deep); }
+.cell--s .l { color:var(--saffron-mid); }
+.cell--k { background:var(--ink); color:var(--paper); }
+.cell--k .l { color:#A3A099; }
+
+.landing-foot {
+  display:flex; justify-content:space-between; gap:var(--s4); flex-wrap:wrap;
+  padding-top:20px; padding-bottom:26px;
+  border-top:1px solid var(--hairline);
+}
+.measure { max-width:60ch; }
+
+.steps { display:flex; flex-direction:column; }
+.step {
+  display:flex; align-items:center; gap:var(--s3);
+  padding:9px 0;
+  font-size:13.5px;
+  color:var(--ink-3);
+  border-bottom:1px solid var(--hairline);
+  transition:color .2s ease;
+}
+.step:last-child { border-bottom:0; }
+.step .dot {
+  width:7px; height:7px; flex:none;
+  background:var(--hairline);
+  transition:background .2s ease;
+}
+.step.on { color:var(--ink); }
+.step.on .dot { background:var(--vermillion); }
+
+/* Ink is primary; nothing else is filled. */
+.btn {
+  display:inline-flex; align-items:center; justify-content:center; gap:var(--s2);
+  padding:13px 24px;
+  border:1px solid var(--hairline);
+  border-radius:var(--radius);
+  font-size:14px; font-weight:500;
+  transition:border-color .15s ease, opacity .15s ease;
+}
+.btn:hover:not(:disabled) { border-color:var(--ink); }
+.btn-primary { background:var(--ink); border-color:var(--ink); color:var(--paper); }
+.btn-primary:hover:not(:disabled) { opacity:.84; border-color:var(--ink); }
+.btn:disabled { opacity:.5; cursor:not-allowed; }
+
+@media (max-width:640px) {
+  .wrap { padding:0 18px; }
+  .landing-body { padding-top:var(--s6); padding-bottom:var(--s7); }
+}
+
+/* ============================================================
+   SIGNED-IN PAGE — full width, same language as the landing
+   ============================================================ */
+
+.page { min-height:100%; background:var(--paper); }
+
+.app { max-width:var(--maxw-app); margin:0 auto; padding:0 28px var(--s8); }
+
+.app-top {
+  display:flex; align-items:center; gap:var(--s5); flex-wrap:wrap;
+  padding:22px 0;
+  border-bottom:1px solid var(--ink);
+  margin-bottom:var(--s7);
+}
+.app-top .hero-mark { flex:1; min-width:0; margin-bottom:0; }
+.app-top .hero-mark .latin, .app-top .hero-mark .arabic { font-size:26px; }
+.app-top .hero-mark .rule { height:22px; }
+
+.identity { text-align:right; min-width:0; }
+.identity .name {
+  display:block; margin-top:2px;
+  font-size:18px; font-weight:500; letter-spacing:-.025em;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+/* The two doors out of this page, side by side at the end of the header. */
+.app-top-actions { flex:none; display:flex; align-items:center; gap:var(--s2); }
+
+.btn-line {
+  flex:none;
+  display:inline-flex; align-items:center; gap:var(--s2);
+  padding:10px 20px;
+  border:1px solid var(--ink);
+  border-radius:var(--radius);
+  font-size:13px; font-weight:500;
+  transition:background .15s ease, color .15s ease;
+}
+
+/* Filled, because the wallet is the primary thing to open from here — and ink
+   is the hue that already means "you, and the action you can take". */
+.btn-wallet { background:var(--ink); color:var(--paper); }
+.btn-wallet:hover { background:var(--ink); color:var(--paper); opacity:.86; }
+.btn-line-v {
+  padding-left:var(--s2);
+  margin-left:var(--s1);
+  border-left:1px solid #45443F;
+  font-size:12.5px; color:#A3A099;
+}
+.btn-line:hover { background:var(--ink); color:var(--paper); }
+
+.app-grid {
+  display:grid;
+  grid-template-columns:minmax(0,380px) minmax(0,1fr);
+  gap:var(--s7);
+  align-items:start;
+  margin-bottom:var(--s7);
+}
+.col { min-width:0; }
+.col > .section:first-child { margin-top:0; }
+
+@media (max-width:900px) {
+  .app { padding:0 20px var(--s7); }
+  .app-grid { grid-template-columns:1fr; gap:var(--s6); }
+  .app-top { gap:var(--s4); margin-bottom:var(--s6); }
+  .identity { text-align:left; flex:1; }
+}
+
+/* Narrow: the wordmark takes its own line, then the name and the two doors
+   share the next one. Three things fighting for one row is what makes a
+   header look broken. */
+@media (max-width:720px) {
+  .app-top { gap:var(--s3) var(--s4); padding:18px 0; }
+  .app-top .hero-mark { flex:1 0 100%; margin-bottom:0; }
+  .identity { flex:1; min-width:0; }
+  .app-top-actions { flex:none; }
+}
+
+
+/* ============================================================
+   PAYMENT CARD — the one saffron block on the page
+   ============================================================ */
+
+.pcard {
+  background:var(--saffron);
+  color:var(--saffron-deep);
+  border-radius:var(--radius-lg);
+  padding:var(--s5) var(--s5) var(--s4);
+  display:flex; flex-direction:column;
+}
+
+.pcard-top { display:flex; align-items:center; justify-content:space-between; gap:var(--s3); }
+
+.tag {
+  font-size:10px; font-weight:500; letter-spacing:.09em; text-transform:uppercase;
+  padding:4px 8px;
+  border:1px solid rgba(61,46,0,.32);
+  border-radius:3px;
+  color:var(--saffron-mid);
+}
+.tag.on { background:var(--vermillion); border-color:var(--vermillion); color:#fff; }
+.pcard-mark { font-size:13px; font-weight:500; letter-spacing:.14em; }
+
+/* The chip reads as a payment card without a photograph of one. */
+.chip {
+  width:38px; height:28px;
+  margin:var(--s5) 0 var(--s4);
+  border-radius:4px;
+  background:rgba(61,46,0,.18);
+  box-shadow:inset 0 0 0 1px rgba(61,46,0,.18);
+  position:relative;
+}
+.chip::before, .chip::after {
+  content:''; position:absolute; left:6px; right:6px; height:1px;
+  background:rgba(61,46,0,.26);
+}
+.chip::before { top:10px; }
+.chip::after  { top:18px; }
+
+/* Hero figure — proportional digits; tabular reads loose at this size. */
+.pcard-amt { font-size:clamp(42px,5.4vw,58px); font-weight:500; line-height:1; letter-spacing:-.04em; }
+.pcard-sub { margin-top:var(--s3); font-size:15px; color:var(--saffron-mid); }
+
+.pcard-foot {
+  display:flex; align-items:flex-end; justify-content:space-between; gap:var(--s3);
+  margin-top:var(--s6); padding-top:var(--s3);
+  border-top:1px solid rgba(61,46,0,.24);
+}
+.pcard-addr { display:flex; flex-direction:column; gap:5px; min-width:0; }
+.pcard-addr .eyebrow { color:var(--saffron-mid); }
+.pcard-addr .mono { font-size:13px; }
+
+.pcard-copy {
+  flex:none;
+  display:inline-flex; align-items:center; gap:6px;
+  padding:8px 14px;
+  border:1px solid rgba(61,46,0,.32);
+  border-radius:var(--radius);
+  font-size:12.5px; font-weight:500;
+  color:var(--saffron-deep);
+  transition:background .15s ease;
+}
+.pcard-copy:hover:not(:disabled) { background:rgba(61,46,0,.1); }
+.pcard-copy:disabled { opacity:.45; cursor:not-allowed; }
+
+.pcard-name {
+  display:flex; justify-content:space-between; gap:var(--s3);
+  margin-top:var(--s4);
+  font-size:11px; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--saffron-mid);
+}
+
+.sk-line { display:inline-block; width:150px; height:12px; border-radius:3px; }
+
+
+/* ============================================================
+   STAT TILES
+   ============================================================ */
+
+.tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--s3); margin-bottom:var(--s3); }
+.tile {
+  border:1px solid var(--hairline);
+  border-radius:var(--radius);
+  padding:var(--s4);
+  display:flex; flex-direction:column; gap:var(--s2);
+}
+.tile-l { font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-3); }
+.tile-v { font-size:22px; font-weight:500; letter-spacing:-.03em; }
+
+/* Says which month the three tiles above are counting. */
+.tiles-note { margin:0 0 var(--s6); font-size:12.5px; color:var(--ink-3); }
+
+/* ============================================================
+   SPEND CHART — one series, so no legend; the title names it
+   ============================================================ */
+
+.chart { display:flex; gap:var(--s3); }
+
+.chart-axis {
+  display:flex; flex-direction:column; justify-content:space-between;
+  height:180px; flex:none;
+  font-size:11px; color:var(--ink-3);
+  font-variant-numeric:tabular-nums;
+  text-align:right;
+}
+
+.chart-plot { position:relative; flex:1; height:180px; min-width:0; }
+
+.gridline {
+  position:absolute; left:0; right:0;
+  height:1px; background:var(--hairline);
+}
+.gridline.base { background:var(--ink); }
+
+.chart-cols {
+  position:absolute; inset:0;
+  display:grid; grid-auto-flow:column; grid-auto-columns:1fr;
+  gap:var(--s3);
+  align-items:end;
+}
+
+.chart-col {
+  position:relative;
+  height:100%;
+  display:flex; align-items:flex-end; justify-content:center;
+  padding:0;
+}
+
+/* Cap the bar and let the band's leftover be air. */
+.bar {
+  position:relative;
+  width:100%; max-width:24px;
+  background:var(--ink);
+  border-radius:4px 4px 0 0;
+  transition:opacity .15s ease;
+}
+/* One month is in focus at a time; the rest recede rather than disappear.
+   The current month keeps its own colour whether or not it is the one picked. */
+.chart-col .bar { opacity:.3; }
+.chart-col.hot .bar { opacity:.6; }
+.chart-col.picked .bar, .chart-col.picked.hot .bar { opacity:1; }
+.chart-col.now .bar { background:var(--vermillion); }
+
+.chart-tip {
+  position:absolute; bottom:calc(100% + 6px); left:50%;
+  transform:translateX(-50%);
+  white-space:nowrap;
+  font-size:11.5px; font-weight:500;
+  background:var(--ink); color:var(--paper);
+  padding:4px 8px; border-radius:4px;
+}
+
+.chart-cap {
+  position:absolute; bottom:calc(100% + 6px); left:50%;
+  transform:translateX(-50%);
+  white-space:nowrap;
+  font-size:11.5px; font-weight:500;
+  color:var(--ink-2);
+}
+
+.chart-note { font-size:12px; color:var(--ink-3); }
+
+.chart-labels {
+  display:grid; grid-auto-flow:column; grid-auto-columns:1fr;
+  gap:var(--s3);
+  margin-top:var(--s2);
+  padding-left:calc(var(--s3) + 34px);
+  font-size:11.5px; color:var(--ink-3); text-align:center;
+}
+.chart-labels .now { color:var(--ink); }
+
+@media (max-width:860px) {
+  .tiles { margin-bottom:var(--s6); }
+}
+
+/* ============================================================
+   ACTIONS — ink is primary; nothing else is filled
+   ============================================================ */
+
+.actions { margin-top:var(--s2); display:grid; grid-template-columns:repeat(4,1fr); gap:var(--s2); }
+
+.action {
+  min-height:86px;
+  padding:var(--s3) var(--s2);
+  border-radius:var(--radius);
+  border:1px solid var(--hairline);
+  display:flex; flex-direction:column; align-items:flex-start; justify-content:space-between;
+  gap:var(--s3);
+  font-size:12px; font-weight:500; letter-spacing:-.01em;
+  transition:border-color .15s ease;
+}
+.action:hover { border-color:var(--ink); }
+.action svg { width:19px; height:19px; }
+.action.primary { background:var(--ink); border-color:var(--ink); color:var(--paper); }
+.action.primary:hover { opacity:.86; }
+
+/* ============================================================
+   SECTIONS
+   ============================================================ */
+
+.section { margin-top:var(--s6); }
+
+.section-head {
+  display:flex; align-items:baseline; justify-content:space-between;
+  padding-bottom:var(--s3);
+  border-bottom:1px solid var(--ink);
+  margin-bottom:var(--s3);
+}
+.section-head h3 { font-size:15px; }
+.section-head button { font-size:12px; color:var(--ink-3); }
+.section-head button:hover { color:var(--vermillion-text); }
+
+/* Transactions */
+.txs { border-top:1px solid var(--hairline); }
+
+.tx {
+  display:flex; align-items:center; gap:var(--s3);
+  padding:var(--s3) 0;
+  width:100%; text-align:left;
+  color:inherit; text-decoration:none;
+  border-bottom:1px solid var(--hairline);
+}
+.tx:hover .t1 { color:var(--vermillion-text); }
+.tx { cursor:pointer; font:inherit; }
+
+.tx-icon {
+  width:34px; height:34px; flex:none;
+  border-radius:var(--radius);
+  display:grid; place-items:center;
+  background:var(--stone);
+  color:var(--ink);
+}
+.tx-icon svg { width:15px; height:15px; }
+.tx-icon.out { background:var(--vermillion-tint); color:var(--vermillion-text); }
+
+.tx-body { flex:1; min-width:0; }
+.tx-body .t1 {
+  display:block; font-size:14.5px; font-weight:500; letter-spacing:-.015em;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  transition:color .15s ease;
+}
+.tx-body .t2 { display:block; margin-top:1px; font-size:12px; color:var(--ink-3); }
+
+/* The amount and what it is worth are one column, right-aligned together. */
+.tx-amt {
+  flex:none;
+  display:flex; flex-direction:column; align-items:flex-end; gap:1px;
+  font-size:14.5px; font-weight:500; letter-spacing:-.02em;
+}
+.tx-amt.out { color:var(--vermillion-text); }
+/* Asked for, not arrived — so it recedes rather than reading as a credit. */
+.tx-amt.pending { color:var(--ink-3); }
+.tx-fiat { font-size:11.5px; font-weight:400; color:var(--ink-3); letter-spacing:0; }
+
+.empty { padding:var(--s7) 0; text-align:center; color:var(--ink-3); }
+.empty svg { width:22px; height:22px; margin-bottom:var(--s2); }
+.empty p { font-size:13px; }
+
+.sk { background:var(--stone); }
+@media (prefers-reduced-motion:no-preference) { .sk { animation:pulse 1.4s ease-in-out infinite; } }
+@keyframes pulse { 50% { opacity:.45; } }
+
+/* ============================================================
+   SHEETS
+   ============================================================ */
+
+.scrim {
+  position:absolute; inset:0;
+  background:rgba(17,17,16,.42);
+  display:flex; align-items:flex-end;
+  z-index:40;
+}
+@media (prefers-reduced-motion:no-preference) {
+  .scrim { animation:fade .18s ease; }
+  .sheet { animation:rise .24s cubic-bezier(.32,.72,0,1); }
+}
+@keyframes fade { from { opacity:0; } }
+@keyframes rise { from { transform:translateY(12px); } }
+
+.sheet {
+  width:100%; max-height:92%; overflow-y:auto;
+  background:var(--paper);
+  border-top:1px solid var(--ink);
+  border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+  padding:var(--s3) var(--gutter) calc(var(--s5) + env(safe-area-inset-bottom,0px));
+}
+.sheet:focus, .sheet:focus-visible { outline:none; }
+
+.grab { width:34px; height:3px; background:var(--hairline); margin:0 auto var(--s5); }
+
+/* With room on screen a bottom sheet is the wrong idiom — centre it. */
+@media (min-width:760px) {
+  .scrim { align-items:center; justify-content:center; padding:var(--s5); }
+  .sheet {
+    max-width:520px; max-height:86vh;
+    border:1px solid var(--ink);
+    border-radius:var(--radius-lg);
+  }
+  .grab { display:none; }
+  @media (prefers-reduced-motion:no-preference) {
+    .sheet { animation:pop .2s cubic-bezier(.32,.72,0,1); }
+  }
+}
+@keyframes pop { from { transform:translateY(8px); opacity:0; } }
+
+.sheet h3 { margin-bottom:var(--s5); }
+
+/* Fields */
+.field { margin-bottom:var(--s4); }
+.field-head { display:flex; align-items:baseline; justify-content:space-between; gap:var(--s3); }
+.mini {
+  margin-bottom:var(--s2);
+  font-size:11px; letter-spacing:.09em; text-transform:uppercase; font-weight:500;
+  color:var(--vermillion-text);
+}
+.mini:hover { text-decoration:underline; text-underline-offset:3px; }
+.field label {
+  display:block; margin-bottom:var(--s2);
+  font-size:11px; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--ink-3); font-weight:500;
+}
+.field input {
+  width:100%; height:48px; padding:0 var(--s3);
+  border-radius:var(--radius);
+  border:1px solid var(--hairline);
+  background:var(--paper);
+  transition:border-color .15s ease;
+}
+.field input:focus { outline:none; border-color:var(--ink); }
+.field input::placeholder { color:var(--ink-3); }
+
+.amount-input {
+  display:flex; align-items:baseline; gap:var(--s2);
+  padding:var(--s3) var(--s4) var(--s4);
+  border-radius:var(--radius);
+  border:1px solid var(--hairline);
+  transition:border-color .15s ease;
+}
+.amount-input:focus-within { border-color:var(--ink); }
+.amount-input.bad { border-color:var(--vermillion); }
+.amount-input .cur { font-size:18px; font-weight:500; color:var(--ink-3); letter-spacing:.02em; }
+.amount-input input {
+  height:auto; padding:0; border:0; background:none; min-width:0;
+  font-size:38px; font-weight:500; letter-spacing:-.035em;
+}
+
+.hint { margin-top:var(--s2); font-size:12px; color:var(--ink-3); }
+.hint.bad { color:var(--vermillion-text); }
+
+.mono-block {
+  font-family:var(--mono); font-size:12px; line-height:1.7; word-break:break-all;
+  background:var(--stone);
+  border-radius:var(--radius);
+  padding:var(--s3);
+  color:var(--ink-2);
+}
+
+/* Picker */
+.picker { margin-bottom:var(--s4); border-top:1px solid var(--hairline); }
+
+.pick {
+  display:flex; align-items:center; gap:var(--s3);
+  width:100%; min-height:60px;
+  padding:var(--s3) var(--s3) var(--s3) var(--s3);
+  text-align:left;
+  border-left:3px solid transparent;
+  border-bottom:1px solid var(--hairline);
+  transition:border-left-color .15s ease;
+}
+.pick:hover { border-left-color:var(--hairline); }
+.pick.on { border-left-color:var(--vermillion); }
+
+.pick .ring {
+  width:36px; height:36px; flex:none;
+  border-radius:var(--radius);
+  display:grid; place-items:center;
+  background:var(--stone); color:var(--ink);
+  font-size:13px; font-weight:500;
+}
+.pick.on .ring { background:var(--ink); color:var(--paper); }
+
+.pick .pi { flex:1; min-width:0; }
+.pick .p1 { display:block; font-size:14.5px; font-weight:500; letter-spacing:-.015em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pick .p2 { display:block; margin-top:1px; font-size:12px; color:var(--ink-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pick .p3 { flex:none; font-size:14px; font-weight:500; }
+
+.check {
+  width:20px; height:20px; flex:none;
+  border:1px solid var(--hairline);
+  display:grid; place-items:center;
+  color:transparent;
+}
+.pick.on .check { background:var(--ink); border-color:var(--ink); color:var(--paper); }
+.check svg { width:11px; height:11px; }
+
+/* Summary rows */
+.rows { margin-bottom:var(--s5); border-top:1px solid var(--ink); }
+.row {
+  display:flex; justify-content:space-between; gap:var(--s4);
+  padding:var(--s3) 0;
+  font-size:13.5px;
+  border-bottom:1px solid var(--hairline);
+}
+.row > span:first-child { color:var(--ink-2); }
+.row > span:last-child { font-weight:500; text-align:right; }
+
+/* Buttons */
+.cta {
+  width:100%; min-height:50px;
+  border-radius:var(--radius);
+  border:1px solid var(--ink);
+  background:var(--ink); color:var(--paper);
+  font-size:14.5px; font-weight:500; letter-spacing:-.01em;
+  display:flex; align-items:center; justify-content:center; gap:var(--s2);
+  transition:opacity .15s ease;
+}
+.cta:hover:not(:disabled) { opacity:.84; }
+.cta:disabled { opacity:.28; cursor:not-allowed; }
+
+.cta.ghost {
+  background:transparent; border-color:var(--hairline); color:var(--ink);
+  min-height:46px; margin-top:var(--s2);
+}
+.cta.ghost:hover { opacity:1; border-color:var(--ink); }
+
+.link {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:13px; font-weight:500;
+  color:var(--vermillion-text);
+  padding:var(--s3) 0;
+}
+.link:hover { text-decoration:underline; text-underline-offset:3px; }
+.link svg { width:13px; height:13px; }
+
+.err {
+  margin-bottom:var(--s4);
+  padding:var(--s3);
+  border-radius:var(--radius);
+  background:var(--vermillion-tint);
+  color:var(--vermillion-text);
+  font-size:12.5px; line-height:1.5;
+}
+.err.ok { background:var(--saffron); color:var(--saffron-deep); }
+
+.spinner {
+  width:14px; height:14px; border-radius:50%;
+  border:2px solid currentColor; border-top-color:transparent;
+  animation:spin .7s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce) { .spinner { animation-duration:2.4s; } }
+
+/* ============================================================
+   RECEIPT — the settled event, in saffron
+   ============================================================ */
+
+.receipt {
+  background:var(--saffron); color:var(--saffron-deep);
+  border-radius:var(--radius-lg);
+  padding:var(--s5);
+  margin-bottom:var(--s5);
+}
+.receipt .eyebrow { color:var(--saffron-mid); }
+.receipt-amt {
+  margin-top:var(--s3);
+  font-size:clamp(34px,9vw,44px); font-weight:500; line-height:1; letter-spacing:-.035em;
+}
+.receipt-to { margin-top:var(--s2); font-size:14px; color:var(--saffron-mid); }
+
+/* ============================================================
+   SUCCESS — the settled event, in saffron
+   ============================================================ */
+
+.done .banner {
+  background:var(--saffron); color:var(--saffron-deep);
+  border-radius:var(--radius-lg);
+  padding:var(--s5);
+  margin-bottom:var(--s5);
+}
+.done .banner .eyebrow { color:var(--saffron-mid); }
+.done .banner .amt {
+  margin-top:var(--s3);
+  font-size:clamp(34px,10vw,44px); font-weight:500; line-height:1; letter-spacing:-.035em;
+}
+.done .banner .to { margin-top:var(--s2); font-size:14px; color:var(--saffron-mid); }
+
+/* ============================================================
+   QR
+   ============================================================ */
+
+.qr-wrap { display:grid; place-items:center; margin-bottom:var(--s5); }
+.qr { padding:var(--s3); background:#fff; border:1px solid var(--hairline); border-radius:var(--radius); line-height:0; }
+
+/* ============================================================
+   SETTINGS
+   ============================================================ */
+
+.set {
+  display:flex; align-items:center; gap:var(--s3);
+  width:100%; min-height:58px; padding:var(--s3) 0;
+  text-align:left;
+  border-top:1px solid var(--ink);
+  border-bottom:1px solid var(--hairline);
+  margin-bottom:var(--s4);
+}
+.set .si { flex:1; min-width:0; }
+.set .s1 { display:block; font-size:14.5px; font-weight:500; letter-spacing:-.015em; }
+.set .s2 { display:block; margin-top:1px; font-size:12px; color:var(--ink-3); }
+
+.switch {
+  width:46px; height:26px; flex:none;
+  border:1px solid var(--hairline);
+  border-radius:var(--radius);
+  padding:2px; display:flex;
+  transition:background .15s ease, border-color .15s ease;
+}
+.switch .knob {
+  width:20px; height:20px;
+  background:var(--ink-3);
+  border-radius:3px;
+  transition:transform .15s cubic-bezier(.32,.72,0,1), background .15s ease;
+}
+.switch[data-on='true'] { background:var(--vermillion); border-color:var(--vermillion); }
+.switch[data-on='true'] .knob { transform:translateX(20px); background:#fff; }
+
+/* ---------- narrow screens, last so they win the cascade ---------- */
+@media (max-width:520px) {
+  /* The balance is on the card right below; in the button it is what breaks. */
+  .btn-line-v { display:none; }
+  .btn-line { padding:10px 16px; }
+
+  /* Three tiles across turns "36.70 SUI" into two lines. One per row keeps
+     the figure whole. */
+  .tiles { grid-template-columns:1fr; gap:var(--s2); }
+  .tile { flex-direction:row; align-items:baseline; justify-content:space-between; padding:var(--s3) var(--s4); }
+}

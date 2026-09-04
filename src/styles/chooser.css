@@ -1,0 +1,135 @@
+/* ============================================================
+   ACCOUNT CHOOSER
+
+   The one screen in this product that is deliberately not Mizan.
+   It is Google's layout, Google's type and Google's greys, because
+   this is the moment the person is asked to trust a screen they
+   already know. Nothing here inherits from the design system, and
+   nothing here leaks back into it — every rule is under .gsi-.
+   ============================================================ */
+
+.gsi-scrim {
+  position:fixed; inset:0; z-index:60;
+  background:rgba(32,33,36,.62);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:16px; padding:24px 16px;
+  overflow:auto;
+  font-family:Roboto,'Helvetica Neue',Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+@media (prefers-reduced-motion:no-preference) {
+  .gsi-scrim { animation:gsi-fade .16s ease-out; }
+  .gsi-card  { animation:gsi-rise .2s cubic-bezier(.2,.8,.3,1); }
+}
+@keyframes gsi-fade { from { opacity:0; } }
+@keyframes gsi-rise { from { opacity:0; transform:translateY(10px); } }
+
+.gsi-card {
+  width:100%; max-width:448px;
+  background:#fff;
+  border:1px solid #dadce0;
+  border-radius:8px;
+  padding:48px 40px 36px;
+  color:#202124;
+}
+.gsi-card:focus, .gsi-card:focus-visible { outline:none; }
+
+.gsi-head { margin-bottom:26px; }
+.gsi-head h2 {
+  margin:16px 0 0;
+  font-family:inherit;
+  font-size:24px; font-weight:400; line-height:1.33;
+  letter-spacing:0; color:#202124;
+}
+.gsi-head p { margin:8px 0 0; font-size:16px; line-height:1.5; color:#202124; }
+
+/* ---------- account rows ---------- */
+
+.gsi-list { list-style:none; margin:0 -8px 24px; padding:0; }
+.gsi-list li + li { border-top:1px solid #e8eaed; }
+
+.gsi-row {
+  width:100%;
+  display:flex; align-items:center; gap:16px;
+  padding:12px 8px;
+  background:none; border:0; border-radius:4px;
+  font:inherit; text-align:left; cursor:pointer;
+  transition:background-color .12s ease;
+}
+.gsi-row:hover { background:#f8f9fa; }
+.gsi-row:focus-visible { outline:2px solid #1a73e8; outline-offset:-2px; }
+
+.gsi-avatar {
+  flex:none;
+  width:36px; height:36px; border-radius:50%;
+  display:grid; place-items:center;
+  color:#fff; font-size:16px; font-weight:500; line-height:1;
+}
+.gsi-avatar--plain { background:#f1f3f4; }
+
+.gsi-who { display:flex; flex-direction:column; gap:1px; min-width:0; }
+.gsi-name  { font-size:14px; font-weight:500; color:#3c4043; }
+.gsi-email { font-size:14px; color:#5f6368; overflow:hidden; text-overflow:ellipsis; }
+
+/* ---------- add an account ---------- */
+
+.gsi-form { margin-bottom:24px; }
+.gsi-field { display:block; margin-bottom:20px; }
+.gsi-field span {
+  display:block; margin-bottom:6px;
+  font-size:12px; color:#5f6368; letter-spacing:.2px;
+}
+.gsi-field input {
+  width:100%; height:48px; padding:0 15px;
+  font:inherit; font-size:16px; color:#202124;
+  background:#fff;
+  border:1px solid #dadce0; border-radius:4px;
+  transition:border-color .12s ease, box-shadow .12s ease;
+}
+.gsi-field input:focus {
+  outline:none;
+  border-color:#1a73e8;
+  box-shadow:inset 0 0 0 1px #1a73e8;
+}
+.gsi-field input::placeholder { color:#80868b; }
+
+.gsi-err { margin:-12px 0 16px; font-size:12px; color:#d93025; }
+
+.gsi-form-foot { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+
+.gsi-next {
+  min-width:88px; height:36px; padding:0 24px;
+  background:#1a73e8; color:#fff;
+  border:0; border-radius:4px;
+  font:inherit; font-size:14px; font-weight:500; letter-spacing:.25px;
+  cursor:pointer;
+  transition:background-color .12s ease;
+}
+.gsi-next:hover { background:#1b66c9; }
+
+.gsi-text-btn {
+  height:36px; padding:0 12px;
+  background:none; border:0; border-radius:4px;
+  font:inherit; font-size:14px; font-weight:500; letter-spacing:.25px;
+  color:#1a73e8; cursor:pointer;
+}
+.gsi-text-btn:hover { background:rgba(26,115,232,.06); }
+
+/* ---------- fine print ---------- */
+
+.gsi-fine { margin:0; font-size:12px; line-height:1.5; color:#5f6368; }
+.gsi-link { color:#1a73e8; }
+
+.gsi-card-foot {
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  margin:22px -12px -8px;
+  padding-left:12px;
+  font-size:12px; color:#5f6368;
+}
+.gsi-foot-links { display:flex; gap:20px; }
+
+@media (max-width:520px) {
+  .gsi-scrim { justify-content:flex-start; }
+  .gsi-card  { padding:32px 24px 28px; }
+  .gsi-head h2 { font-size:22px; }
+}
