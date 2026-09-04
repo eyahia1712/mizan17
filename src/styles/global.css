@@ -277,11 +277,15 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
    PAYMENT CARD — the one saffron block on the page
    ============================================================ */
 
+/* A payment card is a card: it has a size, and it is not "as wide as the
+   column happens to be". Capped near the real 85.6mm proportion so the
+   balance sits on it rather than floating in a field of yellow. */
 .pcard {
+  width:100%; max-width:380px;
   background:var(--saffron);
   color:var(--saffron-deep);
   border-radius:var(--radius-lg);
-  padding:var(--s5) var(--s5) var(--s4);
+  padding:var(--s4) var(--s4) var(--s3);
   display:flex; flex-direction:column;
 }
 
@@ -299,8 +303,8 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
 
 /* The chip reads as a payment card without a photograph of one. */
 .chip {
-  width:38px; height:28px;
-  margin:var(--s5) 0 var(--s4);
+  width:34px; height:25px;
+  margin:var(--s4) 0 var(--s3);
   border-radius:4px;
   background:rgba(61,46,0,.18);
   box-shadow:inset 0 0 0 1px rgba(61,46,0,.18);
@@ -314,22 +318,22 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
 .chip::after  { top:18px; }
 
 /* Hero figure — proportional digits; tabular reads loose at this size. */
-.pcard-amt { font-size:clamp(42px,5.4vw,58px); font-weight:500; line-height:1; letter-spacing:-.04em; }
-.pcard-sub { margin-top:var(--s3); font-size:15px; color:var(--saffron-mid); }
+.pcard-amt { font-size:clamp(30px,3.4vw,38px); font-weight:500; line-height:1; letter-spacing:-.035em; }
+.pcard-sub { margin-top:var(--s2); font-size:13.5px; color:var(--saffron-mid); }
 
 .pcard-foot {
   display:flex; align-items:flex-end; justify-content:space-between; gap:var(--s3);
-  margin-top:var(--s6); padding-top:var(--s3);
+  margin-top:var(--s5); padding-top:var(--s3);
   border-top:1px solid rgba(61,46,0,.24);
 }
 .pcard-addr { display:flex; flex-direction:column; gap:5px; min-width:0; }
 .pcard-addr .eyebrow { color:var(--saffron-mid); }
-.pcard-addr .mono { font-size:13px; }
+.pcard-addr .mono { font-size:12px; }
 
 .pcard-copy {
   flex:none;
   display:inline-flex; align-items:center; gap:6px;
-  padding:8px 14px;
+  padding:7px 12px;
   border:1px solid rgba(61,46,0,.32);
   border-radius:var(--radius);
   font-size:12.5px; font-weight:500;
@@ -508,6 +512,8 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
 }
 .tx-icon svg { width:15px; height:15px; }
 .tx-icon.out { background:var(--vermillion-tint); color:var(--vermillion-text); }
+/* A swap moved value sideways, not out — neutral, like the surface it sits on. */
+.tx-icon.swap { background:var(--stone); color:var(--ink-2); }
 
 .tx-body { flex:1; min-width:0; }
 .tx-body .t1 {
@@ -633,6 +639,24 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
 
 /* Picker */
 .picker { margin-bottom:var(--s4); border-top:1px solid var(--hairline); }
+
+/* Two ways to name a recipient. It needs air under it: flush against the list
+   below, the tabs read as a heading for it rather than a choice about it. */
+.seg {
+  display:flex; gap:var(--s2);
+  margin-bottom:var(--s6);
+  padding-bottom:var(--s5);
+  border-bottom:1px solid var(--hairline);
+}
+.seg button {
+  flex:1;
+  padding:11px var(--s4);
+  border:1px solid var(--hairline); border-radius:var(--radius);
+  font-size:13.5px; font-weight:500; color:var(--ink-2);
+  transition:border-color .15s ease, background .15s ease, color .15s ease;
+}
+.seg button:hover { border-color:var(--ink); color:var(--ink); }
+.seg button.on { background:var(--ink); border-color:var(--ink); color:var(--paper); }
 
 .pick {
   display:flex; align-items:center; gap:var(--s3);
@@ -810,3 +834,41 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
   .tiles { grid-template-columns:1fr; gap:var(--s2); }
   .tile { flex-direction:row; align-items:baseline; justify-content:space-between; padding:var(--s3) var(--s4); }
 }
+
+/* ============================================================
+   SPLIT — the occasion, and how many ways
+   ============================================================ */
+
+/* Named "reason", not "chip" — the payment card already owns .chip, and two
+   things called the same thing in one stylesheet is a bug waiting to happen. */
+.reasons { display:flex; flex-wrap:wrap; gap:var(--s2); margin-top:var(--s2); }
+.reason {
+  padding:7px 13px;
+  white-space:nowrap;
+  border:1px solid var(--hairline); border-radius:var(--radius);
+  font-size:12.5px; font-weight:500; color:var(--ink-2);
+  transition:border-color .15s ease, background .15s ease, color .15s ease;
+}
+.reason:hover { border-color:var(--ink); }
+.reason.on { background:var(--ink); border-color:var(--ink); color:var(--paper); }
+
+.stepper {
+  display:flex; align-items:stretch;
+  border:1px solid var(--hairline); border-radius:var(--radius);
+  overflow:hidden;
+}
+.stepper button {
+  flex:none; width:52px;
+  font-size:20px; font-weight:400; color:var(--ink);
+  transition:background .15s ease;
+}
+.stepper button:hover:not(:disabled) { background:var(--stone); }
+.stepper button:disabled { opacity:.3; cursor:not-allowed; }
+.stepper-v {
+  flex:1;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:1px; padding:var(--s3) 0;
+  border-left:1px solid var(--hairline); border-right:1px solid var(--hairline);
+  font-size:22px; font-weight:500; letter-spacing:-.03em;
+}
+.stepper-l { font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-3); font-weight:500; }

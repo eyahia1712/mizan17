@@ -120,6 +120,69 @@ coming from a salt service.
 Swapping in real zkLogin replaces one function — `keypairForSubject` in `lib/sui.js` —
 plus a proving service and a salt service. Nothing else in the app changes.
 
+## Trisha
+
+An assistant that does transactions by voice. Nothing is on screen until she is
+called by name.
+
+A pink pill sits in the bottom-right corner the whole time, reading **Say “Hey Trisha”**.
+It is not a button — it is the only sign the feature exists, for the person who has no
+way of knowing they can talk to the page.
+
+Say **“Hey Trisha”** — a chime plays, a small panel opens at the top right with an orb
+that moves with your voice, and she answers: **“Aha, I'm listening.”** That is the whole
+greeting. She does not recite what she can do; the example sits on screen where it can
+be read and ignored. Say what you want, she fills the transaction in and reads it back,
+and **only moves money once you say yes out loud.**
+
+    “Hey Trisha, send twenty five to Ayesha”
+    → Send 25 SUI to Ayesha. Shall I?      [to · amount · network fee · total]
+    “yes”
+    → Sent 25 SUI to Ayesha.
+
+She also handles the sentence in two halves — *“send money to Nurul”* → **“How much?”**
+→ *“forty”* — and asks again when a name does not match anyone saved.
+
+**What she does:** sends, reads your balance, and opens buying, swapping or cashing out
+in the wallet with the amount already filled. Those last three pick a provider or a
+payout rail, and that is a choice to make by eye, so she opens the screen rather than
+deciding it.
+
+**Why she confirms.** "Eighty" and "eighteen" are one mishearing apart, and that
+difference is somebody's rent. The figure is shown and spoken before it is spent. She
+also refuses anything over the balance before offering it at all.
+
+**How it works, and its limits.** No backend and no model: `lib/voice.js` wraps the
+browser's own `SpeechRecognition`, `speechSynthesis` and a two-oscillator chime, and
+`lib/commands.js` parses the sentence with a grammar rather than an LLM — instant,
+offline, and unable to invent a recipient. Chrome or Edge; Safari is restrictive about
+continuous listening and Firefox does not support it. It needs the microphone once. And
+worth knowing: in Chrome, `SpeechRecognition` sends audio to Google to transcribe, which
+is the browser's implementation rather than a choice this code makes.
+
+Without a microphone — or to test her — the same path takes a typed sentence:
+
+```js
+window.dispatchEvent(new CustomEvent('trisha:hear', { detail: 'send 20 to ayesha' }))
+```
+
+## Splitting a bill
+
+Splitting is a claim on somebody, and a claim needs a reason — "Nurul owes you 15 SUI"
+means nothing a week later. So the sheet asks three things before it will let you send
+one:
+
+- **What it is for** — free text, with presets for room rent, Wi-Fi, utilities,
+  groceries, dinner and transport.
+- **The total.**
+- **Between how many people**, you included, on a stepper. You can name fewer people
+  than the headcount: split six ways, ask three, and the share is still the total over
+  six.
+
+The occasion becomes the title of the entry, and the request stays **out of the balance
+and out of the month's totals** until it is actually paid — a request is not money that
+has arrived.
+
 ## Sending
 
 A transfer needs two things: an address and an amount. The address is not optional —
@@ -136,11 +199,56 @@ and persist in `localStorage`.
 
 ## The wallet
 
-The *Wallet* button in the header opens a full wallet: balance, Send / Receive / Buy /
-Sell, a SUI token page with a price line, transaction history grouped by month, and
-settings holding the address and the live-transfer switch. It is built on the same
+The *Wallet* button in the header opens a full wallet: total worth, Send / Receive /
+Buy / Swap / Sell, a token page per asset with a price line, history grouped by month,
+and settings holding the address and the live-transfer switch. It is built on the same
 paper, ink and hairlines as the rest of the product — a wallet's shape, not a wallet's
 palette.
+
+It holds two assets, and the second one is not decoration: **SUI** is what the account
+spends, and **USDT** is the step between a volatile coin and a bank account.
+
+### The currency it counts in
+
+Balances are held in SUI and USDT; the currency beside the total is only what people
+*think* in while they look at them. Ringgit is the default because that is where the
+account lives, but a remittance app is used by someone whose family thinks in taka or
+rupees, so eleven are available — MYR, USD, SGD, BDT, NPR, INR, IDR, PHP, EUR, GBP, AED.
+
+Picking one changes every money figure in the product, not just the wallet's: the card,
+the tiles, the activity rows, the quotes. The choice is remembered. Rates live in
+`lib/currency.js`, pinned to the same dollar the stablecoin uses so every conversion
+agrees with every other one.
+
+### Buying, the way an on-ramp works
+
+A wallet does not sell you the coin. It shops the order to licensed providers and shows
+what each would deliver for the same ringgit, which is why the flow has four steps
+instead of one:
+
+1. **Amount**, in ringgit — you decide what to spend, the provider's rate settles the rest.
+2. **Provider** — MoonPay, Transak and Banxa quote the same order. They differ on fee
+   *and* on spread, so the cheapest fee is not always the most SUI. The best is badged.
+3. **Payment** — card, Touch 'n Go eWallet, or CIMB by FPX.
+4. **Review**, then the three things a real order waits on: identity check, payment
+   authorisation, delivery to your address.
+
+### Selling, the way an off-ramp works
+
+There is no route from SUI straight to a bank account, and the *Sell* screen opens by
+saying so. It takes two steps and charges for both:
+
+1. **Swap SUI for USDT** on chain, through a pool (`Cetus · SUI/USDT`) — with a rate,
+   a 0.3% pool fee, price impact that grows with order size, slippage tolerance and a
+   minimum received.
+2. **Cash out the USDT to ringgit**, paid into **Touch 'n Go eWallet** (minutes) or
+   **CIMB Bank** (1–2 business days), at 0.9% + RM 2.
+
+Both halves land in the history as separate entries, because both really happened. If
+you already hold USDT you can skip step one.
+
+The arithmetic for all of this lives in `lib/market.js`, so a quote on a review screen
+is the same number the transaction is built from.
 
 It is not a second set of numbers. The wallet and the Mizan screens read the same
 balance and the same transaction list, and every entry — a transfer, a card purchase, a
@@ -232,6 +340,9 @@ src/
 │       └── WalletUI.jsx      the wallet's own icons and screen primitives
 ├── lib/
 │   ├── auth.js               Google OAuth redirect, ID token decoding, known accounts
+│   ├── commands.js           spoken sentences → transactions, no model
+│   ├── market.js             prices, swap quotes, provider quotes, payout quotes
+│   ├── voice.js              wake word, recognition, speech, chime, mic level
 │   ├── recipients.js         saved send-to addresses, shared by the app and the wallet
 │   ├── sui.js                all chain interaction — key derivation, reads, transfer, faucet
 │   ├── ledger.js             every derived figure: month totals, fees, spend limits

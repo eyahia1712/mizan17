@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { sui, myr, shortAddr, explorerTx } from '../lib/format.js';
+import { token, fiat, shortAddr, explorerTx } from '../lib/format.js';
 import { checkAmount, sendableFrom, totalCost, NETWORK_FEE_SUI } from '../lib/ledger.js';
 import { sendSui, isValidSuiAddress } from '../lib/sui.js';
 import { loadRecipients, saveRecipient } from '../lib/recipients.js';
@@ -65,7 +65,8 @@ export default function SendSheet({ close, preset, live, keypair, balance, spend
           dir: 'out',
           kind: 'transfer',
           title: target.name,
-          sui: value,
+          asset: 'SUI',
+          amount: value,
           handle: target.handle ?? shortAddr(target.address, 8, 6),
           fee: NETWORK_FEE_SUI,
           digest,
@@ -86,15 +87,15 @@ export default function SendSheet({ close, preset, live, keypair, balance, spend
       <div className="done">
         <div className="banner">
           <div className="eyebrow">Sent</div>
-          <div className="amt num">{sui(sent.sui)}</div>
+          <div className="amt num">{token(sent.amount)}</div>
           <div className="to">to {sent.title}</div>
         </div>
 
         <div className="rows">
-          <div className="row"><span>{sent.title} gets</span><span className="num">{myr(sent.sui)}</span></div>
-          <div className="row"><span>Network fee</span><span className="num">{sui(sent.fee)}</span></div>
-          <div className="row"><span>Debited</span><span className="num">{sui(sent.sui + sent.fee)}</span></div>
-          <div className="row"><span>Balance</span><span className="num">{sui(balance)}</span></div>
+          <div className="row"><span>{sent.title} gets</span><span className="num">{fiat(sent.amount)}</span></div>
+          <div className="row"><span>Network fee</span><span className="num">{token(sent.fee)}</span></div>
+          <div className="row"><span>Debited</span><span className="num">{token(sent.amount + sent.fee, 'SUI', { up: true })}</span></div>
+          <div className="row"><span>Balance</span><span className="num">{token(balance)}</span></div>
         </div>
 
         <div className="field">
@@ -214,22 +215,22 @@ export default function SendSheet({ close, preset, live, keypair, balance, spend
           <span className="cur">SUI</span>
         </div>
         <div className={`hint num${amountError ? ' bad' : ''}`}>
-          {amountError ?? (value > 0 ? myr(value) : `Available ${sui(limit)}`)}
+          {amountError ?? (value > 0 ? fiat(value) : `Available ${token(limit)}`)}
         </div>
       </div>
 
       {live && (
         <p className="hint">
-          Live transfers spend your on-chain testnet balance, which is {sui(spendable ?? 0)}.
+          Live transfers spend your on-chain testnet balance, which is {token(spendable ?? 0)}.
           {(spendable ?? 0) <= 0 && <> Fund the account at <a href="https://faucet.sui.io" target="_blank" rel="noreferrer">faucet.sui.io</a> first.</>}
         </p>
       )}
 
       <div className="rows">
-        <div className="row"><span>You send</span><span className="num">{sui(value)}</span></div>
-        <div className="row"><span>Network fee</span><span className="num">{sui(NETWORK_FEE_SUI)}</span></div>
-        <div className="row"><span>Total debited</span><span className="num">{sui(totalCost(value))}</span></div>
-        <div className="row"><span>{target ? `${target.name} gets` : 'They get'}</span><span className="num">{myr(value)}</span></div>
+        <div className="row"><span>You send</span><span className="num">{token(value)}</span></div>
+        <div className="row"><span>Network fee</span><span className="num">{token(NETWORK_FEE_SUI)}</span></div>
+        <div className="row"><span>Total debited</span><span className="num">{token(totalCost(value), 'SUI', { up: true })}</span></div>
+        <div className="row"><span>{target ? `${target.name} gets` : 'They get'}</span><span className="num">{fiat(value)}</span></div>
       </div>
 
       {error && <p className="err">{error}</p>}

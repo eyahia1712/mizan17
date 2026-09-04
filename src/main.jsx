@@ -13,6 +13,7 @@ import { handlePopupCallback } from './lib/auth.js';
 import './styles/global.css';
 import './styles/chooser.css';
 import './styles/wallet.css';
+import './styles/trisha.css';
 
 /* When this document is the OAuth popup it hands the token back and closes,
    so there is nothing to render. */

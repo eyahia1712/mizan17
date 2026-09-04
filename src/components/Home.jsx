@@ -1,6 +1,6 @@
-import { sui, myr } from '../lib/format.js';
+import { token, fiat, cash } from '../lib/format.js';
 import { whenLabel } from '../lib/ledger.js';
-import { Send, Receive, Split, Cash, Clock } from './Icons.jsx';
+import { Send, Receive, Split, Cash, Clock, Swap } from './Icons.jsx';
 
 const ACTIONS = [
   { key: 'send',     label: 'Send',     Icon: Send, primary: true },
@@ -56,22 +56,24 @@ export function TransactionList({ items, title = 'Activity', onOpen, onSeeAll, t
 function Row({ tx, onOpen }) {
   const incoming = tx.dir === 'in';
 
-  // A request is money asked for, not money that arrived. It says so, and it
-  // carries no sign — a "+" would be a claim the balance does not support.
+  /* A swap is not money leaving: the same value comes back in another asset,
+     so it gets the neutral mark and the second line says what arrived. */
+  const isSwap = tx.kind === 'swap';
+
   return (
     <button className="tx" onClick={() => onOpen?.(tx)}>
-      <span className={`tx-icon ${tx.dir}`} aria-hidden="true">
-        {incoming ? <Receive /> : <Send />}
+      <span className={`tx-icon ${isSwap ? 'swap' : tx.dir}`} aria-hidden="true">
+        {isSwap ? <Swap /> : incoming ? <Receive /> : <Send />}
       </span>
       <span className="tx-body">
         <span className="t1">{tx.title}</span>
-        <span className="t2">
-          {tx.pending ? `Requested · ${whenLabel(tx.ts)}` : whenLabel(tx.ts)}
-        </span>
+        <span className="t2">{tx.pending ? `Requested · ${whenLabel(tx.ts)}` : whenLabel(tx.ts)}</span>
       </span>
-      <span className={`tx-amt num${tx.pending ? ' pending' : incoming ? '' : ' out'}`}>
-        <span>{tx.pending ? '' : incoming ? '+' : '−'}{sui(tx.sui)}</span>
-        <span className="tx-fiat">{myr(tx.sui)}</span>
+      <span className={`tx-amt num${incoming || isSwap ? '' : ' out'}`}>
+        <span>{tx.pending ? '' : incoming ? '+' : '−'}{token(tx.amount, tx.asset)}</span>
+        <span className="tx-fiat">
+          {tx.got ? `→ ${token(tx.got.amount, tx.got.asset)}` : tx.fiatMyr != null ? cash(tx.fiatMyr) : fiat(tx.amount, tx.asset)}
+        </span>
       </span>
     </button>
   );

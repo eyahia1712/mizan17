@@ -8,24 +8,32 @@
  * only second currency is the ringgit the money lands in.
  */
 
-/** Demo market rate. One SUI, in ringgit. */
+/** Demo market rates, in ringgit. */
 export const SUI_TO_MYR = 14.86;
+export const USDT_TO_MYR = 4.21;
 
-/** Demo 24-hour move, for the wallet's market row. */
+/** Demo 24-hour moves, for the wallet's market rows. */
 export const SUI_CHANGE_24H = 2.41;
+export const USDT_CHANGE_24H = 0.01;
 
 /** Sui gas is a rounding error. This is the flat network fee we charge. */
 export const NETWORK_FEE_SUI = 0.005;
 
-/** What the on-ramp and off-ramp take, as a fraction. */
-export const BUY_FEE_RATE = 0.01;
+/** What the off-ramp takes converting USDT to ringgit, as a fraction. */
 export const SELL_FEE_RATE = 0.009;
+
+/** Every asset this wallet holds, and what one unit is worth. */
+export const ASSETS = {
+  SUI:  { symbol: 'SUI',  name: 'Sui',        myr: SUI_TO_MYR,  dp: 2, change: SUI_CHANGE_24H },
+  USDT: { symbol: 'USDT', name: 'Tether USD', myr: USDT_TO_MYR, dp: 2, change: USDT_CHANGE_24H },
+};
 
 export const user = {
   name: 'Eya Hia',
   email: 'demo@mizan.app',
-  /** The opening balance, in SUI. Nothing may be spent past it. */
+  /** The opening balances. Nothing may be spent past them. */
   balanceSui: 486.5,
+  balanceUsdt: 24.8,
 };
 
 /**
@@ -114,21 +122,22 @@ const SEED = [
 
 const METHOD = {
   topup: 'Visa •••• 4291',
-  cashout: 'Maybank •••• 4417',
+  cashout: "Touch 'n Go •••• 8891",
 };
 
-export const transactions = SEED.map(([dir, title, ts, sui, kind], i) => {
+export const transactions = SEED.map(([dir, title, ts, amount, kind], i) => {
   const id = `t${i + 1}`;
   return {
     id,
     dir,
     kind,
     title,
-    sui,
+    asset: 'SUI',
+    amount,
     ts,
     handle: handleFor(title) ?? METHOD[kind] ?? null,
     method: METHOD[kind] ?? null,
-    fee: dir === 'out' ? (kind === 'cashout' ? +(sui * SELL_FEE_RATE).toFixed(4) : NETWORK_FEE_SUI) : 0,
+    fee: dir === 'out' ? (kind === 'cashout' ? +(amount * SELL_FEE_RATE).toFixed(4) : NETWORK_FEE_SUI) : 0,
     digest: digestFor(id + ts),
   };
 });
@@ -155,7 +164,44 @@ export const seedCards = [
   { id: 'k2', kind: 'card', brand: 'Mastercard', last4: '7734', exp: '02/28', holder: 'EYA HIA' },
 ];
 
-export const seedBanks = [
-  { id: 'b1', kind: 'bank', brand: 'Maybank',   last4: '4417', sub: 'Savings · Malaysia' },
-  { id: 'b2', kind: 'bank', brand: 'CIMB Bank', last4: '9820', sub: 'Current · Malaysia' },
+/**
+ * Where ringgit lands. Touch 'n Go settles in minutes because it is an
+ * e-wallet; a bank transfer does not, and the flow says so rather than
+ * promising both the same thing.
+ */
+export const payoutRails = [
+  {
+    id: 'tng', kind: 'ewallet', brand: "Touch 'n Go eWallet", short: 'TNG',
+    last4: '8891', sub: 'Linked to +60 12 887 4410',
+    eta: 'Within minutes', etaShort: 'Minutes',
+    min: 10, max: 5000,
+  },
+  {
+    id: 'cimb', kind: 'bank', brand: 'CIMB Bank', short: 'CIMB',
+    last4: '9820', sub: 'Current account · Malaysia',
+    eta: '1–2 business days', etaShort: '1–2 days',
+    min: 50, max: 50000,
+  },
+];
+
+/**
+ * Card and bank rails on the way *in*. A Malaysian on-ramp takes cards, FPX
+ * bank transfer and the local e-wallets, so all three are here.
+ */
+export const buyRails = [
+  ...seedCards.map((c) => ({ ...c, sub: `Expires ${c.exp}`, eta: 'Instant' })),
+  { id: 'tng-in',  kind: 'ewallet', brand: "Touch 'n Go eWallet", short: 'TNG',  last4: '8891', sub: 'Linked to +60 12 887 4410', eta: 'Instant' },
+  { id: 'fpx-in',  kind: 'bank',    brand: 'CIMB Bank',           short: 'CIMB', last4: '9820', sub: 'FPX online banking',        eta: 'Within an hour' },
+];
+
+/**
+ * On-ramp providers, the way a wallet actually buys: it does not sell you the
+ * coin itself, it shops the order to licensed providers and shows what each
+ * would give you. They differ on spread and fee, which is the whole reason the
+ * comparison screen exists.
+ */
+export const onrampProviders = [
+  { id: 'moonpay', name: 'MoonPay', feeRate: 0.0149, spread: 0.006, minMyr: 50,  eta: '2–5 minutes',  kyc: 'verified' },
+  { id: 'transak', name: 'Transak', feeRate: 0.0099, spread: 0.010, minMyr: 60,  eta: '5–10 minutes', kyc: 'verified' },
+  { id: 'banxa',   name: 'Banxa',   feeRate: 0.0199, spread: 0.004, minMyr: 100, eta: 'Under a minute', kyc: 'required' },
 ];

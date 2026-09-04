@@ -11,27 +11,34 @@
  */
 
 import { useState, useMemo, useEffect } from 'react';
-import { seedCards, seedBanks, SUI_CHANGE_24H } from '../../data/mockData.js';
-import { sui, myr, pct, shortAddr } from '../../lib/format.js';
+import { seedCards, buyRails, payoutRails, ASSETS } from '../../data/mockData.js';
+import { token, fiat, pct, shortAddr, cash } from '../../lib/format.js';
 import { byNewest } from '../../lib/ledger.js';
+import { rateMyr } from '../../lib/market.js';
 import {
-  Screen, Sparkline, SuiMark,
-  IcSend, IcReceive, IcBuy, IcSell, IcHome, IcClock, IcCard, IcBank, IcGear,
+  Screen, Sparkline, AssetMark, TrustMark, CurrencyPicker,
+  IcSend, IcReceive, IcBuy, IcSell, IcHome, IcClock, IcCard, IcSwap, IcGear,
   IcQr, IcDown, IcClose, IcNext,
 } from './WalletUI.jsx';
 import {
-  SendFlow, ReceiveScreen, BuyFlow, SellFlow, HistoryScreen, SettingsScreen, TxRow, TxDetail,
+  SendFlow, ReceiveScreen, BuyFlow, SellFlow, SwapFlow, HistoryScreen, SettingsScreen, TxRow, TxDetail,
 } from './Flows.jsx';
 
 const RANGES = ['1D', '1W', '1M', '1Y', 'ALL'];
 
-export default function Wallet({ profile, address, balance, txs, live, setLive, keypair, spendable, onCommit, openOn = 'home', close }) {
-  const [view, setView] = useState(openOn);     // home | token | send | receive | buy | sell | history | settings | tx
-  const [openTx, setOpenTx] = useState(null);
-  const [cards, setCards] = useState(seedCards);
 
-  const sources = useMemo(() => [...cards, ...seedBanks], [cards]);
+export default function Wallet({ profile, address, balances, txs, live, setLive, keypair, spendable, currency, onCurrency, onCommit, openOn = 'home', prefill = null, close }) {
+  const [view, setView] = useState(openOn);     // home | token | send | receive | buy | sell | swap | history | settings | tx
+  const [openTx, setOpenTx] = useState(null);
+  const [token_, setToken] = useState('SUI');
+  const [extraCards, setExtraCards] = useState([]);
+
+  const rails = useMemo(
+    () => [...buyRails, ...extraCards.map((c) => ({ ...c, sub: `Expires ${c.exp}`, eta: 'Instant' }))],
+    [extraCards]
+  );
   const recent = useMemo(() => byNewest(txs).slice(0, 4), [txs]);
+  const balance = balances.SUI ?? 0;
 
   useEffect(() => {
     const onKey = (e) => {
@@ -54,25 +61,36 @@ export default function Wallet({ profile, address, balance, txs, live, setLive, 
       case 'receive':
         return <ReceiveScreen address={address} onExit={home} />;
       case 'buy':
-        return <BuyFlow balance={balance} sources={sources} onAddCard={(c) => setCards((k) => [...k, c])} onCommit={onCommit} onExit={home} />;
+        return <BuyFlow address={address} rails={rails} prefill={prefill} onAddCard={(c) => setExtraCards((k) => [...k, c])} onCommit={onCommit} onExit={home} />;
       case 'sell':
-        return <SellFlow balance={balance} banks={seedBanks} onCommit={onCommit} onExit={home} />;
+        return <SellFlow balances={balances} rails={payoutRails} onCommit={onCommit} onExit={home} />;
+      case 'swap':
+        return <SwapFlow balances={balances} prefill={prefill} onCommit={onCommit} onExit={home} />;
       case 'history':
         return <HistoryScreen txs={txs} onOpen={openReceipt} onExit={home} />;
       case 'tx':
         return <TxDetail tx={openTx} onExit={() => setView('history')} />;
       case 'settings':
-        return <SettingsScreen profile={profile} address={address} live={live} setLive={setLive} onExit={home} onSignOut={close} />;
+        return (
+          <SettingsScreen
+            profile={profile} address={address} live={live} setLive={setLive}
+            currency={currency} onCurrency={onCurrency}
+            onExit={home} onSignOut={close}
+          />
+        );
       case 'token':
-        return <TokenScreen balance={balance} txs={txs} onAct={setView} onOpen={openReceipt} onExit={home} />;
+        return <TokenScreen asset={token_} balances={balances} txs={txs} onAct={setView} onOpen={openReceipt} onExit={home} />;
       default:
         return (
           <HomeScreen
             profile={profile}
             address={address}
-            balance={balance}
+            balances={balances}
             recent={recent}
+            currency={currency}
+            onCurrency={onCurrency}
             onAct={setView}
+            onOpenToken={(a) => { setToken(a); setView('token'); }}
             onOpen={openReceipt}
           />
         );
@@ -88,11 +106,11 @@ export default function Wallet({ profile, address, balance, txs, live, setLive, 
 
         <nav className="tw-nav" aria-label="Wallet sections">
           {[
-            { k: 'home',     l: 'Home',     I: IcHome },
-            { k: 'history',  l: 'History',  I: IcClock },
-            { k: 'buy',      l: 'Buy',      I: IcCard },
-            { k: 'sell',     l: 'Sell',     I: IcBank },
-            { k: 'settings', l: 'Settings', I: IcGear },
+            { k: 'home',    l: 'Home',    I: IcHome },
+            { k: 'history', l: 'History', I: IcClock },
+            { k: 'swap',    l: 'Swap',    I: IcSwap },
+            { k: 'buy',     l: 'Buy',     I: IcCard },
+            { k: 'sell',    l: 'Sell',    I: IcSell },
           ].map(({ k, l, I }) => (
             <button
               key={k}
@@ -118,6 +136,7 @@ const ACTIONS = [
   { k: 'send',    l: 'Send',    I: IcSend },
   { k: 'receive', l: 'Receive', I: IcReceive },
   { k: 'buy',     l: 'Buy',     I: IcBuy },
+  { k: 'swap',    l: 'Swap',    I: IcSwap },
   { k: 'sell',    l: 'Sell',    I: IcSell },
 ];
 
@@ -134,9 +153,12 @@ function ActionRow({ onAct }) {
   );
 }
 
-function HomeScreen({ profile, address, balance, recent, onAct, onOpen }) {
+function HomeScreen({ profile, address, balances, recent, currency, onCurrency, onAct, onOpenToken, onOpen }) {
   const [tab, setTab] = useState('tokens');
-  const up = SUI_CHANGE_24H >= 0;
+
+  /* The headline figure is what everything is worth, not what one coin is —
+     a wallet holding two assets cannot lead with just one of them. */
+  const worth = Object.entries(balances).reduce((n, [asset, held]) => n + held * rateMyr(asset), 0);
 
   return (
     <div className="tw-screen">
@@ -146,7 +168,7 @@ function HomeScreen({ profile, address, balance, recent, onAct, onOpen }) {
         </button>
 
         <button className="tw-wallet-pill" onClick={() => onAct('settings')}>
-          Main Wallet <IcDown width={15} height={15} />
+          <TrustMark size={16} /> Trust Wallet <IcDown width={15} height={15} />
         </button>
 
         <button className="tw-icon-btn" onClick={() => onAct('receive')} aria-label="Receive">
@@ -156,10 +178,14 @@ function HomeScreen({ profile, address, balance, recent, onAct, onOpen }) {
 
       <div className="tw-body">
         <div className="tw-total">
-          <p className="tw-total-amt">{sui(balance)}</p>
+          {/* The figure and the unit it is counted in, together — the currency
+              is a property of the number, not a setting buried elsewhere. */}
+          <div className="tw-total-line">
+            <p className="tw-total-amt">{cash(worth)}</p>
+            <CurrencyPicker value={currency} onChange={onCurrency} />
+          </div>
           <p className="tw-total-sub">
-            {myr(balance)}
-            <span className={`tw-delta ${up ? 'up' : 'down'}`}>{pct(SUI_CHANGE_24H)}</span>
+            {token(balances.SUI ?? 0)} · {token(balances.USDT ?? 0, 'USDT')}
           </p>
           <button className="tw-addr-pill" onClick={() => onAct('receive')}>
             {shortAddr(address, 6, 6)} <IcQr width={13} height={13} />
@@ -175,20 +201,22 @@ function HomeScreen({ profile, address, balance, recent, onAct, onOpen }) {
 
         {tab === 'tokens' ? (
           <>
-            <button className="tw-token" onClick={() => onAct('token')}>
-              <SuiMark size={40} />
-              <span className="tw-token-body">
-                <span className="tw-token-t">SUI</span>
-                <span className="tw-token-s">
-                  {myr(1)}
-                  <span className={`tw-delta ${up ? 'up' : 'down'}`}>{pct(SUI_CHANGE_24H)}</span>
+            {Object.keys(ASSETS).map((asset) => (
+              <button key={asset} className="tw-token" onClick={() => onOpenToken(asset)}>
+                <AssetMark asset={asset} size={40} />
+                <span className="tw-token-body">
+                  <span className="tw-token-t">{asset}</span>
+                  <span className="tw-token-s">
+                    {cash(rateMyr(asset))}
+                    <span className="tw-delta">{pct(ASSETS[asset].change)}</span>
+                  </span>
                 </span>
-              </span>
-              <span className="tw-token-amt">
-                <span>{sui(balance, { bare: true })}</span>
-                <span className="tw-token-fiat">{myr(balance)}</span>
-              </span>
-            </button>
+                <span className="tw-token-amt">
+                  <span>{token(balances[asset] ?? 0, asset, { bare: true })}</span>
+                  <span className="tw-token-fiat">{fiat(balances[asset] ?? 0, asset)}</span>
+                </span>
+              </button>
+            ))}
 
             <button className="tw-ghost-row" onClick={() => onAct('buy')}>
               <span>Manage crypto</span><IcNext width={16} height={16} />
@@ -217,22 +245,26 @@ function HomeScreen({ profile, address, balance, recent, onAct, onOpen }) {
 /* SUI, as a token page                                                */
 /* ------------------------------------------------------------------ */
 
-function TokenScreen({ balance, txs, onAct, onOpen, onExit }) {
+function TokenScreen({ asset = 'SUI', balances, txs, onAct, onOpen, onExit }) {
   const [range, setRange] = useState('1M');
-  const up = SUI_CHANGE_24H >= 0;
-  const rows = useMemo(() => byNewest(txs).slice(0, 8), [txs]);
+  const meta = ASSETS[asset];
+  const held = balances[asset] ?? 0;
+  const rows = useMemo(
+    () => byNewest(txs).filter((t) => t.asset === asset || t.got?.asset === asset).slice(0, 8),
+    [txs, asset]
+  );
 
   return (
-    <Screen title="SUI" onBack={onExit}>
+    <Screen title={asset} onBack={onExit}>
       <div className="tw-hero">
-        <SuiMark size={56} />
-        <p className="tw-hero-amt">{myr(1)}</p>
+        <AssetMark asset={asset} size={56} />
+        <p className="tw-hero-amt">{cash(rateMyr(asset))}</p>
         <p className="tw-hero-sub">
-          <span className={`tw-delta ${up ? 'up' : 'down'}`}>{pct(SUI_CHANGE_24H)}</span> today
+          <span className="tw-delta">{pct(meta.change)}</span> today
         </p>
       </div>
 
-      <div className="tw-chart"><Sparkline seed={`sui-${range}`} up={up} /></div>
+      <div className="tw-chart"><Sparkline seed={`${asset}-${range}`} up={meta.change >= 0} /></div>
 
       <div className="tw-ranges">
         {RANGES.map((r) => (
@@ -242,8 +274,8 @@ function TokenScreen({ balance, txs, onAct, onOpen, onExit }) {
 
       <div className="tw-holding">
         <span className="tw-label">Your balance</span>
-        <p className="tw-holding-amt">{sui(balance)}</p>
-        <p className="tw-holding-sub">{myr(balance)}</p>
+        <p className="tw-holding-amt">{token(held, asset)}</p>
+        <p className="tw-holding-sub">{fiat(held, asset)}</p>
       </div>
 
       <ActionRow onAct={onAct} />
@@ -254,11 +286,11 @@ function TokenScreen({ balance, txs, onAct, onOpen, onExit }) {
       </div>
 
       <div className="tw-about">
-        <h4>About SUI</h4>
+        <h4>About {asset}</h4>
         <p>
-          SUI is the native coin of the Sui network. It pays for gas, secures the network
-          through staking, and settles in about two seconds — which is what makes a
-          transfer feel like a message rather than a bank instruction.
+          {asset === 'SUI'
+            ? 'SUI is the native coin of the Sui network. It pays for gas, secures the network through staking, and settles in about two seconds — which is what makes a transfer feel like a message rather than a bank instruction.'
+            : 'USDT is a dollar-pegged stablecoin. It is the step between a volatile coin and a bank account: an off-ramp can price it in cash, which is why cashing out goes through it rather than selling SUI directly.'}
         </p>
       </div>
     </Screen>

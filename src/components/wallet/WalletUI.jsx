@@ -7,6 +7,7 @@
  */
 
 import { useState } from 'react';
+import { CURRENCIES, CURRENCY_CODES } from '../../lib/currency.js';
 
 /* ------------------------------------------------------------------ */
 /* Icons — filled, 24-grid, heavier than the Mizan set on purpose      */
@@ -17,7 +18,8 @@ const svg = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', stroke
 export const IcSend    = (p) => <svg {...svg} {...p}><path d="M12 19V5M5 12l7-7 7 7" /></svg>;
 export const IcReceive = (p) => <svg {...svg} {...p}><path d="M12 5v14M19 12l-7 7-7-7" /></svg>;
 export const IcBuy     = (p) => <svg {...svg} {...p}><path d="M12 5v14M5 12h14" /></svg>;
-export const IcSell    = (p) => <svg {...svg} {...p}><path d="M4 8h16M4 8l4-4M20 16H4m16 0-4 4" /></svg>;
+export const IcSell    = (p) => <svg {...svg} {...p}><path d="M3 9.5 12 4l9 5.5M5.5 10v8M18.5 10v8M12 10v8M3 20h18" /></svg>;
+export const IcSwap    = (p) => <svg {...svg} {...p}><path d="M4 8h13M13.5 4.5 17 8l-3.5 3.5M20 16H7m3.5-3.5L7 16l3.5 3.5" /></svg>;
 export const IcBack    = (p) => <svg {...svg} {...p}><path d="m15 18-6-6 6-6" /></svg>;
 export const IcNext    = (p) => <svg {...svg} {...p}><path d="m9 18 6-6-6-6" /></svg>;
 export const IcDown    = (p) => <svg {...svg} {...p}><path d="m6 9 6 6 6-6" /></svg>;
@@ -32,11 +34,82 @@ export const IcStack   = (p) => <svg {...svg} {...p}><path d="m12 3 9 5-9 5-9-5 
 export const IcGear    = (p) => <svg {...svg} {...p}><circle cx="12" cy="12" r="3.2" /><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-2.8-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 15H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.1-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 9 4.6V4a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5.9Z" /></svg>;
 export const IcQr      = (p) => <svg {...svg} {...p}><rect x="3.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="13.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="3.5" y="13.5" width="7" height="7" rx="1.5" /><path d="M13.5 13.5h3v3m4 0v4h-4v-3" /></svg>;
 export const IcShield  = (p) => <svg {...svg} {...p}><path d="M12 3.5 5 6.2v5.4c0 4.2 2.9 7.6 7 8.9 4.1-1.3 7-4.7 7-8.9V6.2z" /><path d="m9 12 2.2 2.2L15.5 10" /></svg>;
+export const IcGlobe   = (p) => <svg {...svg} {...p}><circle cx="12" cy="12" r="8.5" /><path d="M3.5 12h17M12 3.5c2.2 2.4 3.4 5.4 3.4 8.5S14.2 18.1 12 20.5c-2.2-2.4-3.4-5.4-3.4-8.5S9.8 5.9 12 3.5Z" /></svg>;
 export const IcEye     = (p) => <svg {...svg} {...p}><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="3" /></svg>;
+
+/* ------------------------------------------------------------------ */
+/* Marks                                                               */
+/*                                                                     */
+/* Third-party marks keep their own colours — a payment brand is        */
+/* recognised by its colour, and the same exception the Google chooser  */
+/* takes applies here.                                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Trust Wallet's shield. Drawn rather than fetched, so it survives an offline
+ * demo, and kept in the brand's own blue for the same reason the Google logo
+ * in the chooser keeps its four colours: a mark is recognised by its colour.
+ */
+export const TrustMark = ({ size = 22 }) => (
+  <svg viewBox="0 0 32 32" width={size} height={size} aria-hidden="true">
+    <path
+      fill="#0500FF"
+      d="M16 2.4 4.9 6.7v9.5c0 6.7 4.5 12.9 11.1 14.8V2.4Z"
+    />
+    <path
+      fill="#3375BB"
+      d="M16 2.4v28.6c6.6-1.9 11.1-8.1 11.1-14.8V6.7Z"
+    />
+    <path
+      fill="#fff"
+      d="M16 7.4 9.4 10v6.1c0 4 2.6 7.7 6.6 9 4-1.3 6.6-5 6.6-9V10Zm0 2.6 4.6 1.8v4.3c0 2.8-1.7 5.4-4.6 6.5Z"
+      opacity=".92"
+    />
+  </svg>
+);
+
+/** Touch 'n Go eWallet. */
+export const TngMark = ({ size = 34 }) => (
+  <span className="tw-brand" style={{ width: size, height: size, background: '#005AAB' }} aria-hidden="true">
+    <svg viewBox="0 0 24 24" width={size * 0.62} height={size * 0.62}>
+      <path fill="#fff" d="M4.6 6.4h9.2v2.5h-3.2v8.7H7.8V8.9H4.6Z" />
+      <path fill="#8DC63F" d="M19.4 10.2a3.8 3.8 0 1 1-3.8 3.8h2.2a1.6 1.6 0 1 0 1.6-1.6Z" />
+    </svg>
+  </span>
+);
+
+/** CIMB. */
+export const CimbMark = ({ size = 34 }) => (
+  <span className="tw-brand" style={{ width: size, height: size, background: '#E30613' }} aria-hidden="true">
+    <span style={{ color: '#fff', fontSize: size * 0.3, fontWeight: 700, letterSpacing: '.02em' }}>CIMB</span>
+  </span>
+);
+
+/** Tether. */
+export const UsdtMark = ({ size = 40 }) => (
+  <span className="tw-brand round" style={{ width: size, height: size, background: '#009393' }} aria-hidden="true">
+    <svg viewBox="0 0 24 24" width={size * 0.6} height={size * 0.6}>
+      <path fill="#fff" d="M6 5h12v2.6h-4.6v1.5c3 .2 5.2.9 5.2 1.7s-2.2 1.5-5.2 1.7v6.1h-2.8v-6.1c-3-.2-5.2-.9-5.2-1.7s2.2-1.5 5.2-1.7V7.6H6Zm6 6.9c2.4 0 4.4-.4 4.4-.8s-2-.8-4.4-.8-4.4.4-4.4.8 2 .8 4.4.8Z" />
+    </svg>
+  </span>
+);
+
+/** An on-ramp provider, as a monogram. */
+export const ProviderMark = ({ name, size = 34 }) => (
+  <span className="tw-brand" style={{ width: size, height: size }} aria-hidden="true">
+    <span style={{ fontSize: size * 0.4, fontWeight: 600 }}>{name[0]}</span>
+  </span>
+);
+
+export const RailMark = ({ rail, size = 34 }) => {
+  if (rail.short === 'TNG') return <TngMark size={size} />;
+  if (rail.short === 'CIMB') return <CimbMark size={size} />;
+  return <span className="tw-brand" style={{ width: size, height: size }} aria-hidden="true"><IcCard width={18} height={18} /></span>;
+};
 
 /** The Sui mark: a droplet, white on Sui blue. */
 export const SuiMark = ({ size = 40 }) => (
-  <span className="tw-coin" style={{ width: size, height: size }} aria-hidden="true">
+  <span className="tw-coin tw-brand round" style={{ width: size, height: size, background: '#4DA2FF' }} aria-hidden="true">
     <svg viewBox="0 0 24 24" width={size * 0.58} height={size * 0.58}>
       <path
         fill="#fff"
@@ -228,3 +301,34 @@ export function QrBlock({ value = '', size = 21, px = 196 }) {
     </svg>
   );
 }
+
+/** Whichever coin mark the asset calls for. */
+export const AssetMark = ({ asset, size = 40 }) =>
+  asset === 'USDT' ? <UsdtMark size={size} /> : <SuiMark size={size} />;
+
+/**
+ * Which money the wallet is counted in. A native select, because it is a list
+ * of eleven things on a touch screen and the platform's own picker beats
+ * anything reimplemented here.
+ */
+export function CurrencyPicker({ value, onChange, id }) {
+  return (
+    <span className="tw-cur">
+      <select
+        id={id}
+        className="tw-cur-select"
+        value={value}
+        onChange={(e) => onChange?.(e.target.value)}
+        aria-label="Display currency"
+      >
+        {CURRENCY_CODES.map((code) => (
+          <option key={code} value={code}>{code} · {CURRENCIES[code].name}</option>
+        ))}
+      </select>
+      <span className="tw-cur-face" aria-hidden="true">
+        {value} <IcDown width={13} height={13} />
+      </span>
+    </span>
+  );
+}
+

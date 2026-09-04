@@ -1,0 +1,156 @@
+/* ============================================================
+   TRISHA
+
+   The assistant panel. It sits bottom-right and is the only
+   thing in this product with a blur in it: the system bans
+   gradients and shadows because they make flat information look
+   soft, but an orb that does not glow does not read as
+   listening. The exception is one element wide and earns its
+   keep — everything around it is the same paper, ink and
+   hairlines as the rest of the app.
+   ============================================================ */
+
+/* ---------- the standing badge ---------- */
+
+/*
+ * Pink, and the only pink in the product. Every other hue here has a job it
+ * never shares — ink is you, vermillion is money leaving, saffron is a settled
+ * event — so the voice could not borrow one of them without saying two things
+ * at once. This is deep enough to carry white text at 4.6:1 rather than the
+ * pale pink that would fail it.
+ */
+:root { --voice:#D6336C; }
+
+.tr-badge {
+  position:fixed; z-index:88;
+  right:22px; bottom:22px;
+  display:inline-flex; align-items:center; gap:9px;
+  padding:9px 16px 9px 13px;
+  background:var(--voice); color:#fff;
+  border-radius:999px;
+  font-size:12.5px; font-weight:500; letter-spacing:-.01em;
+  pointer-events:none;              /* a sign, not a control */
+}
+
+.tr-badge-dot {
+  width:7px; height:7px; border-radius:50%;
+  background:#fff;
+}
+
+@media (prefers-reduced-motion:no-preference) {
+  .tr-badge { animation:tr-badge-in .4s ease-out; }
+  .tr-badge-dot { animation:tr-pulse 2.4s ease-in-out infinite; }
+}
+@keyframes tr-badge-in { from { opacity:0; transform:translateY(10px); } }
+@keyframes tr-pulse { 0%, 100% { opacity:1; } 50% { opacity:.35; } }
+
+/* The microphone being blocked is the one thing that needs saying out loud,
+   so it takes the error colour and the badge's place. */
+.tr-hint {
+  position:fixed; z-index:88;
+  right:22px; bottom:22px;
+  max-width:280px;
+  padding:11px 15px;
+  background:var(--vermillion); color:#fff;
+  border-radius:var(--radius);
+  font-size:12.5px; line-height:1.5; font-weight:500;
+}
+
+/* ---------- the panel ---------- */
+
+.tr {
+  position:fixed; z-index:90;
+  right:22px; top:96px;
+  width:min(340px, calc(100vw - 32px));
+  padding:var(--s4);
+  background:var(--paper);
+  border:1px solid var(--ink);
+  border-radius:var(--radius-lg);
+}
+@media (prefers-reduced-motion:no-preference) {
+  .tr { animation:tr-in .26s cubic-bezier(.2,.9,.3,1); }
+}
+@keyframes tr-in { from { opacity:0; transform:translateY(-14px) scale(.97); } }
+
+.tr-head { display:flex; align-items:center; gap:var(--s3); }
+.tr-said { flex:1; display:flex; flex-direction:column; gap:1px; min-width:0; }
+.tr-name { font-size:11px; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-3); font-weight:500; }
+.tr-line { font-size:15px; font-weight:500; letter-spacing:-.02em; }
+
+.tr-x {
+  flex:none; width:26px; height:26px; border-radius:var(--radius);
+  display:grid; place-items:center;
+  font-size:18px; line-height:1; color:var(--ink-3);
+  transition:background .15s ease, color .15s ease;
+}
+.tr-x:hover { background:var(--stone); color:var(--ink); }
+
+.tr-heard {
+  margin-top:var(--s3);
+  font-size:13px; line-height:1.5; color:var(--ink-2);
+}
+
+/* ---------- what she is about to do ---------- */
+
+.tr-slip { margin-top:var(--s4); border-top:1px solid var(--hairline); }
+.tr-slip-row {
+  display:flex; align-items:baseline; justify-content:space-between; gap:var(--s3);
+  padding:9px 0;
+  border-bottom:1px solid var(--hairline);
+  font-size:13px;
+}
+.tr-slip-row > span:first-child { color:var(--ink-2); }
+.tr-slip-row > span:last-child { font-weight:500; font-variant-numeric:tabular-nums; }
+.tr-slip-row--total > span:last-child { font-size:15px; }
+
+.tr-live { margin-top:var(--s2); font-size:11.5px; color:var(--vermillion-text); }
+
+.tr-ask { margin-top:var(--s3); font-size:12.5px; color:var(--ink-3); }
+.tr-ask b { color:var(--ink); font-weight:500; }
+
+/* ---------- the orb ---------- */
+
+.tr-orb {
+  position:relative; flex:none;
+  width:44px; height:44px;
+  border-radius:50%;
+  overflow:hidden;
+  background:var(--stone);
+  transform:scale(var(--amp, 1));
+  transition:transform .09s linear;
+}
+
+.tr-blob {
+  position:absolute;
+  width:130%; height:130%;
+  border-radius:50%;
+  filter:blur(7px);
+  opacity:.9;
+}
+.tr-blob.a { background:var(--vermillion); top:-28%; left:-24%; }
+.tr-blob.b { background:var(--saffron);    bottom:-30%; right:-26%; }
+.tr-blob.c { background:var(--ink);        bottom:-42%; left:-10%; width:96%; height:96%; opacity:.62; }
+
+@media (prefers-reduced-motion:no-preference) {
+  .tr-blob.a { animation:tr-turn 3.6s linear infinite; }
+  .tr-blob.b { animation:tr-turn 4.8s linear infinite reverse; }
+  .tr-blob.c { animation:tr-turn 6.2s linear infinite; }
+}
+@keyframes tr-turn {
+  from { transform:rotate(0deg) translate(5%, 3%); }
+  to   { transform:rotate(360deg) translate(5%, 3%); }
+}
+
+/* She stops swirling once she is doing rather than listening. */
+.tr-orb--working .tr-blob, .tr-orb--done .tr-blob { animation-duration:1.6s; }
+.tr-orb--error .tr-blob.b, .tr-orb--error .tr-blob.c { opacity:0; }
+.tr-orb--error .tr-blob.a { filter:blur(4px); }
+
+@media (max-width:900px) {
+  .tr { top:88px; }
+}
+
+@media (max-width:520px) {
+  .tr { right:12px; left:12px; top:12px; width:auto; }
+  .tr-badge, .tr-hint { right:12px; bottom:12px; }
+}

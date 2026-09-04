@@ -9,7 +9,7 @@
  * Amounts are SUI throughout.
  */
 
-import { digestFor, NETWORK_FEE_SUI, SELL_FEE_RATE, BUY_FEE_RATE } from '../data/mockData.js';
+import { digestFor, NETWORK_FEE_SUI, SELL_FEE_RATE } from '../data/mockData.js';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -47,30 +47,65 @@ export const monthLabel = (key) => MONTHS[Number(key.slice(5)) - 1];
 /* Aggregation                                                         */
 /* ------------------------------------------------------------------ */
 
-const amount = (t) => Number(t.sui) || 0;
+const amount = (t) => Number(t.amount) || 0;
+
+/** Gas is charged on top of a transfer or a swap; every other fee comes out
+    of the money already moving, so it must not be subtracted twice. */
+export const feeOnTop = (t) => t.kind === 'transfer' || t.kind === 'swap';
+
+/** A swap is not money entering or leaving — it is the same money, rephrased. */
+const movesValue = (t) => t.kind !== 'swap';
 
 /** A requested payment has not arrived. It is on the list, not in the totals. */
 export const settled = (t) => !t.pending;
 
 /**
- * What a transaction does to the balance.
- *   • incoming        credits the amount (a purchase fee is taken in ringgit)
- *   • a transfer out  costs the amount plus the network fee
- *   • a cash-out      costs the amount; its fee comes out of the proceeds
+ * What a transaction does to the balances. Returns a sparse map keyed by
+ * asset, because one entry can touch two of them: a swap spends SUI and
+ * credits USDT, and recording that as two separate rows would let the two
+ * halves drift apart.
  */
 export function balanceDelta(t) {
-  if (t.pending) return 0;
-  if (t.dir === 'in') return Number(t.sui) || 0;
-  return -((Number(t.sui) || 0) + (t.kind === 'transfer' ? Number(t.fee) || 0 : 0));
+  if (t.pending) return {};
+
+  const out = {};
+  const value = amount(t);
+  const fee = Number(t.fee) || 0;
+  const asset = t.asset ?? 'SUI';
+
+  out[asset] = t.dir === 'in' ? value : -(value + (feeOnTop(t) ? fee : 0));
+
+  if (t.got) {
+    out[t.got.asset] = (out[t.got.asset] ?? 0) + (Number(t.got.amount) || 0);
+  }
+  return out;
 }
 
-/** Sent, received, fees and count over whatever slice you hand it. */
-export function totals(items) {
+/** Apply an entry to a balance sheet, and hand back a new one. */
+export function applyTx(balances, t) {
+  const next = { ...balances };
+  for (const [asset, delta] of Object.entries(balanceDelta(t))) {
+    next[asset] = round((next[asset] ?? 0) + delta);
+  }
+  return next;
+}
+
+/**
+ * Sent, received, fees and count over whatever slice you hand it.
+ *
+ * Only SUI is counted, and swaps are left out of both directions: the account
+ * page reports what left and what arrived, and a swap did neither. Its gas
+ * still shows up under fees, because that was really paid.
+ */
+export function totals(items, asset = 'SUI') {
   return items.filter(settled).reduce(
     (acc, t) => {
-      if (t.dir === 'out') { acc.sent += amount(t); acc.out += 1; }
-      else { acc.received += amount(t); acc.in += 1; }
-      acc.fees += Number(t.fee) || 0;
+      const own = (t.asset ?? 'SUI') === asset;
+      if (own && movesValue(t)) {
+        if (t.dir === 'out') { acc.sent += amount(t); acc.out += 1; }
+        else { acc.received += amount(t); acc.in += 1; }
+      }
+      if (own) acc.fees += Number(t.fee) || 0;
       return acc;
     },
     { sent: 0, received: 0, fees: 0, out: 0, in: 0 }
@@ -106,7 +141,7 @@ export const byNewest = (items) => [...items].sort((a, b) => at(b.ts) - at(a.ts)
 /* Spending rules                                                      */
 /* ------------------------------------------------------------------ */
 
-export { NETWORK_FEE_SUI, SELL_FEE_RATE, BUY_FEE_RATE };
+export { NETWORK_FEE_SUI, SELL_FEE_RATE };
 
 /**
  * What a transfer actually costs the balance. The fee is not optional and not
@@ -149,8 +184,9 @@ let seq = 0;
  * balance and out of the totals until someone actually pays it.
  */
 export function makeTx({
-  dir, title, sui, kind = 'transfer', handle = null, method = null,
-  fee, digest, real = false, ts, pending = false, toAddress = null,
+  dir, title, amount: value, asset = 'SUI', kind = 'transfer',
+  handle = null, method = null, fee, got = null, note = null,
+  digest, real = false, pending = false, toAddress = null, fiatMyr = null, ts,
 }) {
   const id = `n${Date.now().toString(36)}-${seq++}`;
   return {
@@ -158,12 +194,21 @@ export function makeTx({
     dir,
     kind,
     title,
-    sui: round(sui),
+    asset,
+    amount: round(value),
     ts: ts ?? new Date().toISOString(),
     handle,
     method,
+    note,
     toAddress,
+    /* What this cost or paid, in ringgit, when that is not simply the amount at
+       today's rate — a cash-out nets a fee off, a purchase adds one on. Kept as
+       a figure, not a formatted string, so it follows the chosen currency. */
+    fiatMyr,
     fee: round(fee ?? (dir === 'out' ? NETWORK_FEE_SUI : 0)),
+    /* A swap credits a second asset; carrying it on the same entry is what
+       keeps the two halves from ever disagreeing. */
+    got: got ? { asset: got.asset, amount: round(got.amount) } : null,
     digest: digest ?? digestFor(id),
     real,
     pending,

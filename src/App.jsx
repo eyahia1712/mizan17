@@ -5,10 +5,12 @@ import { ReceiveSheet, SplitSheet, WithdrawSheet, AccountSheet, TransactionSheet
 import { QuickActions, TransactionList } from './components/Home.jsx';
 import { PaymentCard, MonthlyPanel } from './components/Dashboard.jsx';
 import Wallet from './components/wallet/Wallet.jsx';
+import Trisha from './components/Trisha.jsx';
 import { user as demoUser, transactions as seedTransactions } from './data/mockData.js';
-import { loadOrCreateKeypair, keypairForSubject, getBalanceSui } from './lib/sui.js';
-import { makeTx, balanceDelta, round, byNewest } from './lib/ledger.js';
-import { sui } from './lib/format.js';
+import { loadOrCreateKeypair, keypairForSubject, getBalanceSui, sendSui } from './lib/sui.js';
+import { makeTx, applyTx, round, byNewest, NETWORK_FEE_SUI } from './lib/ledger.js';
+import { token, shortAddr } from './lib/format.js';
+import { getCurrency, setCurrency } from './lib/currency.js';
 
 /** How many rows the account page shows before handing over to the wallet. */
 const ACTIVITY_ROWS = 6;
@@ -31,12 +33,22 @@ export default function App() {
   const [preset, setPreset] = useState(null);
   const [openTx, setOpenTx] = useState(null);
   const [wallet, setWallet] = useState(null); // null, or the wallet screen to open on
+  const [walletPrefill, setWalletPrefill] = useState(null);
   const [chainBalance, setChainBalance] = useState(null);
 
-  /* One balance, one list of transactions. Every figure in the product — the
-     card, the tiles, the chart, the wallet — is read off these two. */
-  const [balance, setBalance] = useState(demoUser.balanceSui);
+  /* The formatters read the active currency from the module, and this is the
+     only thing that sets it — so changing it here re-renders everything that
+     prints money. */
+  const [currency, setCurrencyState] = useState(getCurrency);
+  const chooseCurrency = useCallback((code) => setCurrencyState(setCurrency(code)), []);
+
+  /* One balance sheet, one list of transactions. Every figure in the product —
+     the card, the tiles, the chart, the wallet — is read off these two. The
+     sheet has two assets because cashing out goes through a stablecoin. */
+  const [balances, setBalances] = useState({ SUI: demoUser.balanceSui, USDT: demoUser.balanceUsdt });
   const [txs, setTxs] = useState(seedTransactions);
+
+  const balance = balances.SUI;
 
   const sheetRef = useRef(null);
 
@@ -91,25 +103,54 @@ export default function App() {
    */
   const commit = useCallback((partial) => {
     const tx = makeTx(partial);
-    setBalance((b) => round(b + balanceDelta(tx)));
+    setBalances((b) => applyTx(b, tx));
     setTxs((list) => [tx, ...list]);
     return tx;
   }, []);
 
-  const openWallet = useCallback((screen = 'home') => {
+  const openWallet = useCallback((screen = 'home', prefill = null) => {
     closeSheet();
+    setWalletPrefill(prefill);
     setWallet(screen);
   }, [closeSheet]);
 
-  function recordRequest(count, each) {
+  /**
+   * One transfer, wherever it was asked for — the send sheet, the wallet, or
+   * out loud. Keeping it here means live mode and the ledger are handled once
+   * rather than in every screen that can spend.
+   */
+  const sendTo = useCallback(async ({ recipient, amount }) => {
+    let digest;
+    if (live) {
+      digest = await sendSui({ keypair, recipient: recipient.address, amountSui: amount });
+    } else {
+      await new Promise((r) => setTimeout(r, 900));
+    }
+    return commit({
+      dir: 'out',
+      kind: 'transfer',
+      asset: 'SUI',
+      title: recipient.name,
+      amount,
+      handle: recipient.handle ?? shortAddr(recipient.address, 8, 6),
+      fee: NETWORK_FEE_SUI,
+      digest,
+      real: live,
+      toAddress: recipient.address,
+    });
+  }, [live, keypair, commit]);
+
+  function recordRequest({ reason, heads, each, from }) {
     // A request is not money that has arrived: it goes on the list and stays
-    // out of the balance and the totals until it is paid.
+    // out of the balance and the totals until it is paid. The occasion travels
+    // with it, because that is what makes it recognisable a week later.
     commit({
       dir: 'in',
       kind: 'request',
-      title: `${count} ${count === 1 ? 'person' : 'people'}`,
-      sui: each * count,
-      handle: 'Split request',
+      title: reason,
+      amount: each * from,
+      handle: `Split ${heads} ways · ${from} asked`,
+      note: `${token(each)} each`,
       fee: 0,
       pending: true,
     });
@@ -136,7 +177,7 @@ export default function App() {
             <button className="btn-line btn-wallet" onClick={() => openWallet('home')}>
               <WalletMark />
               Wallet
-              <span className="btn-line-v num">{sui(balance)}</span>
+              <span className="btn-line-v num">{token(balance)}</span>
             </button>
             <button className="btn-line" onClick={() => setSheet('account')}>Account</button>
           </div>
@@ -209,17 +250,28 @@ export default function App() {
           key={wallet}
           profile={profile}
           address={address}
-          balance={balance}
+          balances={balances}
           txs={txs}
           live={live}
           setLive={setLive}
           keypair={keypair}
           spendable={chainBalance}
+          currency={currency}
+          onCurrency={chooseCurrency}
           onCommit={commit}
           openOn={wallet}
-          close={() => setWallet(null)}
+          prefill={walletPrefill}
+          close={() => { setWallet(null); setWalletPrefill(null); }}
         />
       )}
+
+      {/* Nothing on screen until she is called by name. */}
+      <Trisha
+        balances={balances}
+        live={live}
+        onSend={sendTo}
+        onOpenWallet={openWallet}
+      />
     </div>
   );
 }

@@ -18,4 +18,4 @@ export const Home     = (p) => <svg {...s} {...p}><path d="M4 10.5 12 4l8 6.5V19
 export const Clock    = (p) => <svg {...s} {...p}><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 1.8" /></svg>;
 export const Copy     = (p) => <svg {...s} {...p}><rect x="9" y="9" width="11" height="11" rx="2.5" /><path d="M15 5.5A2.5 2.5 0 0 0 12.5 4H6a2 2 0 0 0-2 2v6.5A2.5 2.5 0 0 0 6.5 15" /></svg>;
 export const External = (p) => <svg {...s} {...p}><path d="M14 4h6v6M20 4l-9 9M18 14.5V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4.5" /></svg>;
-
+export const Swap     = (p) => <svg {...s} {...p}><path d="M4 8h13M13.5 4.5 17 8l-3.5 3.5M20 16H7m3.5-3.5L7 16l3.5 3.5" /></svg>;

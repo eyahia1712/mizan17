@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { contacts, payoutMethods } from '../data/mockData.js';
-import { sui, myr, explorerAddr, explorerTx } from '../lib/format.js';
-import { whenLabel, round } from '../lib/ledger.js';
+import { token, fiat, cash, explorerAddr, explorerTx } from '../lib/format.js';
+import { getCurrency } from '../lib/currency.js';
+import { whenLabel, round, feeOnTop } from '../lib/ledger.js';
 import { fundFromFaucet } from '../lib/sui.js';
 import { Tick, Copy, External } from './Icons.jsx';
 
@@ -84,21 +85,73 @@ function QrBlock({ value = '', size = 15 }) {
 /* Split                                                               */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Splitting a bill is not just arithmetic — it is a claim on somebody, and a
+ * claim needs a reason. "Nurul owes you 15 SUI" means nothing a week later;
+ * "Wi-Fi, September, between 4" is something she can recognise and agree with.
+ * So the occasion is asked for first, and it travels with the request.
+ */
+
+const OCCASIONS = ['Room rent', 'Wi-Fi bill', 'Utilities', 'Groceries', 'Dinner', 'Transport'];
+
 export function SplitSheet({ close, onRequest }) {
   const people = contacts.slice(1, 4);
+
+  const [reason, setReason] = useState('');
   const [total, setTotal] = useState('45');
+  const [heads, setHeads] = useState(4);          // including you
   const [picked, setPicked] = useState(people.map((c) => c.id));
 
   const value = Number(total) || 0;
-  const heads = picked.length + 1;               // plus you
-  const each = value / heads;
+  const each = heads > 0 ? value / heads : 0;
+
+  /* You are always one of the heads, so the others can never exceed the rest. */
+  const others = heads - 1;
+  const named = picked.slice(0, others);
+  const unnamed = Math.max(0, others - named.length);
+
+  const label = reason.trim();
+  const ready = label.length > 0 && value > 0 && heads >= 2;
 
   const toggle = (id) =>
-    setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+    setPicked((p) => {
+      if (p.includes(id)) return p.filter((x) => x !== id);
+      if (p.length >= others) return p;            // no more seats at this table
+      return [...p, id];
+    });
+
+  const setCount = (n) => {
+    const next = Math.max(2, Math.min(12, n));
+    setHeads(next);
+    setPicked((p) => p.slice(0, next - 1));
+  };
 
   return (
     <>
-      <h3>Split</h3>
+      <h3>Split a bill</h3>
+
+      <div className="field">
+        <label htmlFor="reason">What is it for?</label>
+        <input
+          id="reason"
+          autoComplete="off"
+          placeholder="Room rent, Wi-Fi, groceries…"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          autoFocus
+        />
+        <div className="reasons">
+          {OCCASIONS.map((o) => (
+            <button
+              key={o}
+              className={`reason${label.toLowerCase() === o.toLowerCase() ? ' on' : ''}`}
+              onClick={() => setReason(o)}
+            >
+              {o}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="field">
         <label htmlFor="total">Total</label>
@@ -112,44 +165,74 @@ export function SplitSheet({ close, onRequest }) {
           />
           <span className="cur">SUI</span>
         </div>
-        <div className="hint num">{myr(value)}</div>
+        <div className="hint num">{fiat(value)}</div>
       </div>
 
-      <div className="picker">
-        {people.map((c) => {
-          const on = picked.includes(c.id);
-          return (
-            <button
-              key={c.id}
-              className={`pick${on ? ' on' : ''}`}
-              onClick={() => toggle(c.id)}
-              aria-pressed={on}
-            >
-              <span className="ring" aria-hidden="true">{c.name[0]}</span>
-              <span className="pi">
-                <span className="p1">{c.name}</span>
-                <span className="p2">{c.rel}</span>
-              </span>
-              <span className="p3 num">{on ? sui(each) : '—'}</span>
-              <span className="check"><Tick /></span>
-            </button>
-          );
-        })}
+      <div className="field">
+        <label>Between how many people?</label>
+        <div className="stepper">
+          <button onClick={() => setCount(heads - 1)} disabled={heads <= 2} aria-label="One fewer person">−</button>
+          <span className="stepper-v num">
+            {heads}
+            <span className="stepper-l">including you</span>
+          </span>
+          <button onClick={() => setCount(heads + 1)} disabled={heads >= 12} aria-label="One more person">+</button>
+        </div>
+        <div className="hint num">{fiat(each)} each · {token(each)} each</div>
+      </div>
+
+      <div className="field">
+        <div className="field-head">
+          <label>Request from</label>
+          <span className="hint" style={{ margin: 0 }}>
+            {named.length} of {others} named
+          </span>
+        </div>
+        <div className="picker">
+          {people.map((c) => {
+            const on = named.includes(c.id);
+            const full = !on && named.length >= others;
+            return (
+              <button
+                key={c.id}
+                className={`pick${on ? ' on' : ''}`}
+                onClick={() => toggle(c.id)}
+                aria-pressed={on}
+                disabled={full}
+              >
+                <span className="ring" aria-hidden="true">{c.name[0]}</span>
+                <span className="pi">
+                  <span className="p1">{c.name}</span>
+                  <span className="p2">{c.rel}</span>
+                </span>
+                <span className="p3 num">{on ? token(each) : '—'}</span>
+                <span className="check"><Tick /></span>
+              </button>
+            );
+          })}
+        </div>
+        {unnamed > 0 && (
+          <p className="hint">
+            {unnamed} {unnamed === 1 ? 'share is' : 'shares are'} counted but not named — the split
+            still divides by {heads}.
+          </p>
+        )}
       </div>
 
       <div className="rows">
+        <div className="row"><span>Occasion</span><span>{label || '—'}</span></div>
         <div className="row"><span>Between</span><span>{heads} people</span></div>
-        <div className="row"><span>Your share</span><span className="num">{sui(each)}</span></div>
-        <div className="row"><span>You collect</span><span className="num">{sui(each * picked.length)}</span></div>
-        <div className="row"><span>In ringgit</span><span className="num">{myr(each * picked.length)}</span></div>
+        <div className="row"><span>Your share</span><span className="num">{token(each)}</span></div>
+        <div className="row"><span>You collect</span><span className="num">{token(each * named.length)}</span></div>
+        <div className="row"><span>In {getCurrency()}</span><span className="num">{fiat(each * named.length)}</span></div>
       </div>
 
       <button
         className="cta"
-        disabled={!picked.length || value <= 0}
-        onClick={() => { onRequest?.(picked.length, each); close(); }}
+        disabled={!ready || named.length === 0}
+        onClick={() => { onRequest?.({ reason: label, heads, each, from: named.length }); close(); }}
       >
-        Request
+        {ready ? `Request ${token(each)} each` : 'Name it and set a total'}
       </button>
       <button className="cta ghost" onClick={close}>Cancel</button>
     </>
@@ -168,8 +251,8 @@ export function WithdrawSheet({ close, balanceSui, onOpenWallet }) {
       <h3>Cash out</h3>
 
       <div className="rows">
-        <div className="row"><span>Available</span><span className="num">{sui(balanceSui)}</span></div>
-        <div className="row"><span>In ringgit</span><span className="num">{myr(balanceSui)}</span></div>
+        <div className="row"><span>Available</span><span className="num">{token(balanceSui)}</span></div>
+        <div className="row"><span>In {getCurrency()}</span><span className="num">{fiat(balanceSui)}</span></div>
       </div>
 
       <div className="picker">
@@ -206,7 +289,7 @@ export function WithdrawSheet({ close, balanceSui, onOpenWallet }) {
  */
 export function TransactionSheet({ close, tx }) {
   const incoming = tx.dir === 'in';
-  const debited = round(tx.sui + (tx.kind === 'transfer' ? tx.fee : 0));
+  const debited = round(tx.amount + (feeOnTop(tx) ? tx.fee : 0));
 
   return (
     <>
@@ -215,7 +298,7 @@ export function TransactionSheet({ close, tx }) {
       <div className="receipt">
         <div className="eyebrow">{incoming ? 'Received' : 'Sent'}</div>
         <div className="receipt-amt">
-          {incoming ? '+' : '−'}{sui(tx.sui)}
+          {incoming ? '+' : '−'}{token(tx.amount, tx.asset)}
         </div>
         <div className="receipt-to">
           {incoming ? 'from' : 'to'} {tx.title}
@@ -231,10 +314,10 @@ export function TransactionSheet({ close, tx }) {
           <div className="row"><span>Account</span><span>{tx.handle}</span></div>
         )}
         <div className="row"><span>When</span><span>{whenLabel(tx.ts)}</span></div>
-        <div className="row"><span>Amount</span><span className="num">{sui(tx.sui)}</span></div>
-        <div className="row"><span>In ringgit</span><span className="num">{myr(tx.sui)}</span></div>
-        <div className="row"><span>Fee</span><span className="num">{sui(tx.fee)}</span></div>
-        {!incoming && <div className="row"><span>Debited</span><span className="num">{sui(debited)}</span></div>}
+        <div className="row"><span>Amount</span><span className="num">{token(tx.amount, tx.asset)}</span></div>
+        <div className="row"><span>In {getCurrency()}</span><span className="num">{tx.fiatMyr != null ? cash(tx.fiatMyr) : fiat(tx.amount, tx.asset)}</span></div>
+        <div className="row"><span>Fee</span><span className="num">{token(tx.fee, tx.asset)}</span></div>
+        {!incoming && <div className="row"><span>Debited</span><span className="num">{token(debited, tx.asset, { up: true })}</span></div>}
         <div className="row"><span>Network</span><span>Sui testnet</span></div>
         <div className="row">
           <span>Status</span>
@@ -305,14 +388,14 @@ export function AccountSheet({ close, profile, address, live, setLive, balanceSu
           <span className="wallet-open-t">Wallet</span>
           <span className="wallet-open-s">Send, receive, buy and cash out SUI</span>
         </span>
-        <span className="wallet-open-v num">{sui(balanceSui)}</span>
+        <span className="wallet-open-v num">{token(balanceSui)}</span>
       </button>
 
       <div className="rows">
         <div className="row"><span>Name</span><span>{profile.name}</span></div>
         {profile.email && <div className="row"><span>Google</span><span>{profile.email}</span></div>}
         <div className="row"><span>Network</span><span>Sui testnet</span></div>
-        <div className="row"><span>Balance</span><span className="num">{sui(balanceSui)}</span></div>
+        <div className="row"><span>Balance</span><span className="num">{token(balanceSui)}</span></div>
       </div>
 
       <button

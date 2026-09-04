@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { sui, myr, suiNum, shortAddr } from '../lib/format.js';
+import { token, fiat, suiNum, shortAddr } from '../lib/format.js';
 import { monthlySeries } from '../lib/ledger.js';
 import { Copy, Tick } from './Icons.jsx';
 
@@ -32,8 +32,8 @@ export function PaymentCard({ balanceSui, address, live, name }) {
         <span className="chip" aria-hidden="true" />
 
         {/* Hero figure: proportional digits — tabular looks loose at this size. */}
-        <div className="pcard-amt">{sui(balanceSui)}</div>
-        <div className="pcard-sub num">{myr(balanceSui)}</div>
+        <div className="pcard-amt">{token(balanceSui)}</div>
+        <div className="pcard-sub num">{fiat(balanceSui)}</div>
 
         <div className="pcard-foot">
           <span className="pcard-addr">
@@ -92,9 +92,9 @@ export function MonthlyPanel({ items }) {
   const top = axisTop(Math.max(...series.map((d) => d.sent)));
 
   const tiles = [
-    { label: 'Sent', value: sui(month.sent) },
-    { label: 'Received', value: sui(month.received) },
-    { label: 'Fees paid', value: sui(month.fees) },
+    { label: 'Sent', value: token(month.sent) },
+    { label: 'Received', value: token(month.received) },
+    { label: 'Fees paid', value: token(month.fees) },
   ];
 
   return (
@@ -110,7 +110,7 @@ export function MonthlyPanel({ items }) {
 
       <p className="tiles-note">
         {month.label} {month.year} · {month.out} {month.out === 1 ? 'transfer' : 'transfers'} out ·
-        {' '}worth {myr(month.sent)}
+        {' '}worth {fiat(month.sent)}
       </p>
 
       <section className="section">
@@ -142,12 +142,12 @@ export function MonthlyPanel({ items }) {
                   onFocus={() => setHover(n)}
                   onBlur={() => setHover(null)}
                   aria-pressed={n === i}
-                  aria-label={`${d.label} ${d.year}: ${sui(d.sent)} sent`}
+                  aria-label={`${d.label} ${d.year}: ${token(d.sent)} sent`}
                 >
                   {/* The label rides the bar, so it must live inside it. */}
                   <span className="bar" style={{ height: `${(d.sent / top) * 100}%` }}>
                     {hover === n ? (
-                      <span className="chart-tip num">{sui(d.sent)}</span>
+                      <span className="chart-tip num">{token(d.sent)}</span>
                     ) : n === i && (
                       /* Label selectively — the month in focus, never every bar. */
                       <span className="chart-cap num">{tick(d.sent)}</span>

@@ -1,13 +1,23 @@
 import { useState, useMemo } from 'react';
-import { seedBanks, BUY_FEE_RATE, SELL_FEE_RATE } from '../../data/mockData.js';
-import { sui, myr, shortAddr, explorerTx, explorerAddr } from '../../lib/format.js';
-import { checkAmount, sendableFrom, totalCost, round, NETWORK_FEE_SUI, whenLabel, byNewest, monthKey, monthLabel } from '../../lib/ledger.js';
+import { payoutRails, onrampProviders } from '../../data/mockData.js';
+import { token, fiat, cash, shortAddr, explorerTx, explorerAddr } from '../../lib/format.js';
+import {
+  checkAmount, sendableFrom, totalCost, round, feeOnTop,
+  NETWORK_FEE_SUI, whenLabel, byNewest, monthKey, monthLabel,
+} from '../../lib/ledger.js';
+import {
+  buyQuotes, swapQuote, payoutQuote, rateMyr,
+  SWAP_ROUTE, POOL_FEE_RATE, OFFRAMP_FEE_RATE, OFFRAMP_FLAT_MYR,
+} from '../../lib/market.js';
 import { isValidSuiAddress, sendSui } from '../../lib/sui.js';
 import { loadRecipients, saveRecipient, findRecipient } from '../../lib/recipients.js';
 import {
   Screen, Detail, CopyField, AmountField, MethodRow, Success, QrBlock,
-  IcSend, IcReceive, IcCard, IcBank, IcNext, IcShield, IcEye, SuiMark,
+  SuiMark, AssetMark, RailMark, ProviderMark,
+  IcSend, IcReceive, IcCard, IcCheck, IcNext, IcSwap, IcShield, IcEye, IcGlobe,
+  CurrencyPicker,
 } from './WalletUI.jsx';
+import { CURRENCIES } from '../../lib/currency.js';
 
 /* ================================================================== */
 /* Send                                                                */
@@ -74,11 +84,11 @@ export function SendFlow({ balance, address, live, keypair, spendable, onCommit,
       <Screen title="Sent">
         <Success
           title="Transfer sent"
-          amount={`− ${sui(done.sui)}`}
-          sub={`to ${done.title} · ${myr(done.sui)}`}
+          amount={`− ${token(done.amount)}`}
+          sub={`to ${done.title} · ${fiat(done.amount)}`}
           details={[
-            { label: 'Network fee', value: sui(done.fee) },
-            { label: 'Total debited', value: sui(done.sui + done.fee) },
+            { label: 'Network fee', value: token(done.fee) },
+            { label: 'Total debited', value: token(done.amount + done.fee, 'SUI', { up: true }) },
             { label: 'Status', value: done.real ? 'Settled on Sui' : 'Confirmed (demo)' },
             { label: 'Transaction', value: shortAddr(done.digest, 8, 6) },
           ]}
@@ -99,17 +109,17 @@ export function SendFlow({ balance, address, live, keypair, spendable, onCommit,
       <Screen title="Confirm send" onBack={busy ? undefined : () => setStep('form')}>
         <div className="tw-hero">
           <SuiMark size={52} />
-          <p className="tw-hero-amt">{sui(value)}</p>
-          <p className="tw-hero-sub">{myr(value)}</p>
+          <p className="tw-hero-amt">{token(value)}</p>
+          <p className="tw-hero-sub">{fiat(value)}</p>
         </div>
 
         <div className="tw-details">
           <Detail label="From" value={`Main Wallet · ${shortAddr(address, 6, 4)}`} />
           <Detail label="To" value={named ? `${named.name} · ${shortAddr(to, 6, 4)}` : shortAddr(to, 8, 6)} />
           <Detail label="Network" value={live ? 'Sui Testnet' : 'Sui Testnet (demo)'} />
-          <Detail label="Network fee" value={sui(NETWORK_FEE_SUI)} />
-          <Detail label="Max total" value={sui(totalCost(value))} strong />
-          <Detail label="Balance after" value={sui(round(limit - totalCost(value)))} />
+          <Detail label="Network fee" value={token(NETWORK_FEE_SUI)} />
+          <Detail label="Max total" value={token(totalCost(value), 'SUI', { up: true })} strong />
+          <Detail label="Balance after" value={token(round(limit - totalCost(value)))} />
         </div>
 
         {error && <p className="tw-error">{error}</p>}
@@ -176,7 +186,7 @@ export function SendFlow({ balance, address, live, keypair, spendable, onCommit,
       <AmountField
         value={amount}
         onChange={setAmount}
-        sub={value > 0 ? myr(value) : `Available ${sui(limit)}`}
+        sub={value > 0 ? fiat(value) : `Available ${token(limit)}`}
         max={max}
         onMax={() => setAmount(String(max))}
         error={amountError}
@@ -184,7 +194,7 @@ export function SendFlow({ balance, address, live, keypair, spendable, onCommit,
 
       {live && (
         <p className="tw-note">
-          Live transfers spend your on-chain testnet balance, which is {sui(spendable ?? 0)}.
+          Live transfers spend your on-chain testnet balance, which is {token(spendable ?? 0)}.
         </p>
       )}
 
@@ -225,8 +235,16 @@ export function ReceiveScreen({ address, onExit }) {
 }
 
 /* ================================================================== */
-/* Buy — the on-ramp, from a card or a bank account                    */
+/* Buy — the on-ramp, the way one actually works                       */
 /* ================================================================== */
+
+/**
+ * A wallet does not sell you the coin. It shops the order to licensed
+ * on-ramp providers, shows what each would deliver for the same cash, and
+ * hands the payment off to whichever you pick. That is four decisions —
+ * amount, provider, payment method, confirm — and collapsing them into one
+ * screen is what made the earlier version read as a mock-up.
+ */
 
 const cardBrand = (number) => {
   const n = number.replace(/\D/g, '');
@@ -238,50 +256,68 @@ const cardBrand = (number) => {
 
 const groupCard = (v) => v.replace(/\D/g, '').slice(0, 19).replace(/(.{4})/g, '$1 ').trim();
 
-export function BuyFlow({ balance, sources, onAddCard, onCommit, onExit }) {
-  const [step, setStep] = useState('form');     // form | addcard | confirm | working | done
-  const [amount, setAmount] = useState('');
-  const [pick, setPick] = useState(sources[0]?.id ?? null);
+const QUICK_MYR = [100, 250, 500, 1000];
+
+export function BuyFlow({ address, rails, prefill = null, onAddCard, onCommit, onExit }) {
+  const [step, setStep] = useState('amount');   // amount | provider | pay | review | working | done | addcard
+  const [spend, setSpend] = useState(prefill ? String(prefill) : '');
+  const [providerId, setProviderId] = useState(null);
+  const [railId, setRailId] = useState(rails[0]?.id ?? null);
+  const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(null);
 
-  const value = Number(amount) || 0;
-  const method = sources.find((s) => s.id === pick) ?? sources[0];
+  const value = Number(spend) || 0;
+  const quotes = useMemo(() => buyQuotes({ myr: value || 500 }), [value]);
+  const best = quotes[0];
+  const provider = quotes.find((q) => q.id === providerId) ?? best;
+  const rail = rails.find((r) => r.id === railId) ?? rails[0];
 
-  const fee = round(value * BUY_FEE_RATE);
-  const tooSmall = value > 0 && value < 0.5;
+  const minimum = Math.min(...onrampProviders.map((p) => p.minMyr));
+  const tooSmall = value > 0 && value < minimum;
 
   async function confirm() {
     setStep('working');
-    await new Promise((r) => setTimeout(r, 1600));
-    const label = `${method.brand} •••• ${method.last4}`;
+    // Identity, then payment, then delivery — the three things a real order
+    // waits on, in the order it waits on them.
+    for (const n of [1, 2, 3]) {
+      await new Promise((r) => setTimeout(r, 900));
+      setProgress(n);
+    }
+    const label = `${rail.brand} •••• ${rail.last4}`;
     const tx = onCommit({
       dir: 'in',
       kind: 'topup',
-      title: method.kind === 'card' ? 'Card top-up' : 'Bank top-up',
-      sui: value,
+      asset: 'SUI',
+      title: `Bought via ${provider.name}`,
+      amount: provider.receives,
       handle: label,
       method: label,
-      fee,                       // charged in ringgit; carried in SUI so every fee totals in one unit
+      note: `${provider.name} order`,
+      fiatMyr: value,               // what was actually charged, fee included
+      fee: 0,                       // the provider's cut is billed in cash, not taken in SUI
     });
-    setDone({ tx, label });
+    setDone({ tx, provider, rail, spend: value });
     setStep('done');
   }
 
   if (step === 'addcard') {
-    return <AddCard onCancel={() => setStep('form')} onSave={(card) => { onAddCard(card); setPick(card.id); setStep('form'); }} />;
+    return <AddCard onCancel={() => setStep('pay')} onSave={(card) => { onAddCard(card); setRailId(card.id); setStep('pay'); }} />;
   }
 
+  /* ---- 4. delivered ---- */
   if (step === 'done' && done) {
     return (
-      <Screen title="Purchase complete">
+      <Screen title="Order complete">
         <Success
-          title="SUI added to your wallet"
-          amount={`+ ${sui(done.tx.sui)}`}
-          sub={`paid ${myr((done.tx.sui + done.tx.fee))} with ${done.label}`}
+          title={`${done.provider.name} delivered your SUI`}
+          amount={`+ ${token(done.tx.amount)}`}
+          sub={`paid ${cash(done.spend)} with ${done.rail.brand} •••• ${done.rail.last4}`}
           details={[
-            { label: 'Rate', value: `1 SUI = ${myr(1)}` },
-            { label: 'Processing fee', value: `${(BUY_FEE_RATE * 100).toFixed(1)}% · ${sui(done.tx.fee)}` },
-            { label: 'New balance', value: sui(balance), strong: true },
+            { label: 'Provider', value: done.provider.name },
+            { label: 'Order ID', value: done.tx.digest.slice(0, 12).toUpperCase() },
+            { label: 'Rate', value: `1 SUI = ${cash(done.provider.price)}` },
+            { label: 'Provider fee', value: cash(done.provider.fee) },
+            { label: 'Delivered to', value: shortAddr(address, 6, 6) },
           ]}
           onDone={onExit}
         />
@@ -289,74 +325,168 @@ export function BuyFlow({ balance, sources, onAddCard, onCommit, onExit }) {
     );
   }
 
-  if (step === 'confirm' || step === 'working') {
-    const busy = step === 'working';
+  /* ---- 3. paying ---- */
+  if (step === 'working') {
+    const stages = [
+      `Identity verified with ${provider.name}`,
+      `Payment authorised · ${rail.brand}`,
+      'Delivering SUI to your wallet',
+    ];
     return (
-      <Screen title="Confirm purchase" onBack={busy ? undefined : () => setStep('form')}>
+      <Screen title="Processing order">
         <div className="tw-hero">
           <SuiMark size={52} />
-          <p className="tw-hero-amt">+ {sui(value)}</p>
-          <p className="tw-hero-sub">for {myr(value + fee)}</p>
+          <p className="tw-hero-amt">{cash(value)}</p>
+          <p className="tw-hero-sub">with {provider.name}</p>
         </div>
 
-        <div className="tw-details">
-          <Detail label="Pay with" value={`${method.brand} •••• ${method.last4}`} />
-          <Detail label="Rate" value={`1 SUI = ${myr(1)}`} />
-          <Detail label="Amount" value={myr(value)} />
-          <Detail label={`Fee (${(BUY_FEE_RATE * 100).toFixed(1)}%)`} value={myr(fee)} />
-          <Detail label="Total charged" value={myr(value + fee)} strong />
-          <Detail label="You receive" value={sui(value)} strong />
+        <div className="tw-stages">
+          {stages.map((label, i) => (
+            <div key={label} className={`tw-stage${i < progress ? ' on' : ''}${i === progress ? ' now' : ''}`}>
+              <span className="tw-stage-dot">{i < progress ? <IcCheck width={12} height={12} /> : null}</span>
+              {label}
+            </div>
+          ))}
         </div>
 
-        <button className="tw-btn" onClick={confirm} disabled={busy}>
-          {busy ? <><span className="tw-spin" /> Processing payment</> : `Pay ${myr(value + fee)}`}
-        </button>
-        <p className="tw-fine">Demo purchase. No card is charged and no money moves.</p>
+        <p className="tw-fine">Do not close this screen. Orders normally clear in {provider.eta}.</p>
       </Screen>
     );
   }
 
+  /* ---- 2b. review ---- */
+  if (step === 'review') {
+    return (
+      <Screen title="Review order" onBack={() => setStep('pay')}>
+        <div className="tw-hero">
+          <SuiMark size={52} />
+          <p className="tw-hero-amt">{token(provider.receives)}</p>
+          <p className="tw-hero-sub">for {cash(value)}</p>
+        </div>
+
+        <div className="tw-details">
+          <Detail label="Provider" value={provider.name} />
+          <Detail label="Pay with" value={`${rail.brand} •••• ${rail.last4}`} />
+          <Detail label="Rate" value={`1 SUI = ${cash(provider.price)}`} />
+          <Detail label="Amount" value={cash(value - provider.fee)} />
+          <Detail label={`${provider.name} fee (${(provider.feeRate * 100).toFixed(2)}%)`} value={cash(provider.fee)} />
+          <Detail label="Total charged" value={cash(value)} strong />
+          <Detail label="You receive" value={token(provider.receives)} strong />
+          <Detail label="Delivered to" value={shortAddr(address, 6, 6)} />
+          <Detail label="Arrives" value={provider.eta} />
+        </div>
+
+        <button className="tw-btn" onClick={confirm}>Confirm and pay {cash(value)}</button>
+        <p className="tw-fine">
+          The order is carried out by {provider.name}, not by Mizan, under its own terms and
+          identity checks. Demo purchase — no card is charged and no money moves.
+        </p>
+      </Screen>
+    );
+  }
+
+  /* ---- 2a. payment method ---- */
+  if (step === 'pay') {
+    return (
+      <Screen title="Pay with" onBack={() => setStep('provider')}>
+        <p className="tw-note">{provider.name} accepts these in Malaysia.</p>
+
+        <div className="tw-list">
+          {rails.map((r) => (
+            <MethodRow
+              key={r.id}
+              mark={r.kind === 'card' ? <IcCard width={18} height={18} /> : <RailMark rail={r} size={34} />}
+              title={r.kind === 'card' ? `${r.brand} •••• ${r.last4}` : r.brand}
+              sub={r.sub}
+              on={r.id === rail?.id}
+              onClick={() => setRailId(r.id)}
+            />
+          ))}
+          <MethodRow
+            mark={<span className="tw-initial">+</span>}
+            title="Add debit or credit card"
+            sub="Visa, Mastercard, Amex"
+            onClick={() => setStep('addcard')}
+            right={<IcNext width={18} height={18} />}
+          />
+        </div>
+
+        <button className="tw-btn" disabled={!rail} onClick={() => setStep('review')}>Continue</button>
+      </Screen>
+    );
+  }
+
+  /* ---- 1b. provider comparison ---- */
+  if (step === 'provider') {
+    return (
+      <Screen title="Choose a provider" onBack={() => setStep('amount')}>
+        <p className="tw-note">Same {cash(value)}, three quotes. Fees and spreads differ, so the amount of SUI does too.</p>
+
+        <div className="tw-list">
+          {quotes.map((q, i) => (
+            <button
+              key={q.id}
+              className={`tw-quote${q.id === provider.id ? ' on' : ''}`}
+              onClick={() => setProviderId(q.id)}
+              disabled={q.belowMinimum}
+              aria-pressed={q.id === provider.id}
+            >
+              <ProviderMark name={q.name} size={34} />
+              <span className="tw-quote-body">
+                <span className="tw-quote-t">
+                  {q.name}
+                  {i === 0 && !q.belowMinimum && <span className="tw-badge">Best rate</span>}
+                </span>
+                <span className="tw-quote-s">
+                  {q.belowMinimum
+                    ? `Minimum ${cash(q.minMyr)}`
+                    : `Fee ${cash(q.fee)} · ${q.eta}`}
+                </span>
+              </span>
+              <span className="tw-quote-amt">
+                <span>{token(q.receives)}</span>
+                <span className="tw-quote-rate">at {cash(q.price)}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <button className="tw-btn" disabled={provider.belowMinimum} onClick={() => setStep('pay')}>
+          Continue with {provider.name}
+        </button>
+      </Screen>
+    );
+  }
+
+  /* ---- 1a. amount ---- */
   return (
     <Screen title="Buy SUI" onBack={onExit}>
+      {/* Fiat first: you decide what to spend, not what to receive — the
+          provider's rate settles the rest. */}
       <AmountField
-        value={amount}
-        onChange={setAmount}
-        sub={value > 0 ? `Costs ${myr(value + fee)}` : `1 SUI = ${myr(1)}`}
-        error={tooSmall ? 'The minimum purchase is 0.5 SUI.' : null}
+        value={spend}
+        onChange={setSpend}
+        unit="RM"
+        sub={value > 0 ? `≈ ${token(best.receives)} after fees` : `1 SUI = ${cash(rateMyr('SUI'))}`}
+        error={tooSmall ? `The smallest order any provider takes is ${cash(minimum)}.` : null}
         autoFocus
       />
 
       <div className="tw-quick">
-        {[10, 25, 50, 100].map((q) => (
-          <button key={q} className={`tw-chip${value === q ? ' on' : ''}`} onClick={() => setAmount(String(q))}>
-            {q} SUI
+        {QUICK_MYR.map((q) => (
+          <button key={q} className={`tw-chip${value === q ? ' on' : ''}`} onClick={() => setSpend(String(q))}>
+            {cash(q).replace('.00', '')}
           </button>
         ))}
       </div>
 
-      <div className="tw-label tw-label--sp">Pay with</div>
-      <div className="tw-list">
-        {sources.map((s) => (
-          <MethodRow
-            key={s.id}
-            mark={s.kind === 'card' ? <IcCard width={20} height={20} /> : <IcBank width={20} height={20} />}
-            title={`${s.brand} •••• ${s.last4}`}
-            sub={s.kind === 'card' ? `Expires ${s.exp}` : s.sub}
-            on={s.id === pick}
-            onClick={() => setPick(s.id)}
-          />
-        ))}
-        <MethodRow
-          mark={<span className="tw-initial">+</span>}
-          title="Add debit or credit card"
-          sub="Visa, Mastercard, Amex"
-          onClick={() => setStep('addcard')}
-          right={<IcNext width={18} height={18} />}
-        />
+      <div className="tw-details" style={{ marginTop: 24 }}>
+        <Detail label="Best quote" value={value > 0 ? `${best.name} · ${token(best.receives)}` : '—'} />
+        <Detail label="Delivered to" value={shortAddr(address, 6, 6)} />
       </div>
 
-      <button className="tw-btn" disabled={value <= 0 || tooSmall || !method} onClick={() => setStep('confirm')}>
-        Continue
+      <button className="tw-btn" disabled={value <= 0 || tooSmall} onClick={() => setStep('provider')}>
+        Compare providers
       </button>
     </Screen>
   );
@@ -384,6 +514,8 @@ function AddCard({ onSave, onCancel }) {
       brand: cardBrand(number),
       last4: digits.slice(-4),
       exp,
+      sub: `Expires ${exp}`,
+      eta: 'Instant',
       holder: holder.trim().toUpperCase(),
     });
   }
@@ -456,59 +588,66 @@ function AddCard({ onSave, onCancel }) {
 }
 
 /* ================================================================== */
-/* Sell — the off-ramp, out to a bank account                          */
+/* Swap                                                                */
 /* ================================================================== */
 
-export function SellFlow({ balance, banks = seedBanks, onCommit, onExit }) {
-  const [step, setStep] = useState('form');
-  const [amount, setAmount] = useState('');
-  const [pick, setPick] = useState(banks[0]?.id ?? null);
-  const [done, setDone] = useState(null);
+/**
+ * SUI to USDT and back, through a pool. This is a screen in its own right and
+ * it is also step one of cashing out, because there is no route from SUI
+ * straight to a bank account — the stablecoin is what an off-ramp can price.
+ */
+export function SwapFlow({ balances, prefill = null, onCommit, onExit, onDone }) {
+  const [from, setFrom] = useState('SUI');
+  const [amount, setAmount] = useState(prefill ? String(prefill) : '');
+  const [step, setStep] = useState('form');     // form | confirm | working | done
+  const [result, setResult] = useState(null);
 
+  const to = from === 'SUI' ? 'USDT' : 'SUI';
+  const held = balances[from] ?? 0;
   const value = Number(amount) || 0;
-  const bank = banks.find((b) => b.id === pick) ?? banks[0];
-  const fee = round(value * SELL_FEE_RATE);
-  const proceeds = Math.max(0, value - fee);
+  const quote = useMemo(() => swapQuote({ from, to, amount: value }), [from, to, value]);
 
-  // No network fee here: the fee comes out of the proceeds, so the balance
-  // only ever loses the amount actually sold.
-  const amountError =
+  // Gas is always paid in SUI, so swapping SUI must leave enough behind for it.
+  const max = from === 'SUI' ? sendableFrom(held) : round(held);
+  const error =
     !amount ? null
     : value <= 0 ? 'Enter an amount greater than zero.'
-    : value > balance ? `You only have ${sui(balance)}.`
+    : value > max ? `You can swap at most ${token(max, from)}.`
     : null;
 
   async function confirm() {
     setStep('working');
     await new Promise((r) => setTimeout(r, 1600));
-    const label = `${bank.brand} •••• ${bank.last4}`;
     const tx = onCommit({
       dir: 'out',
-      kind: 'cashout',
-      title: 'Cash out',
-      sui: value,
-      handle: label,
-      method: label,
-      fee,
+      kind: 'swap',
+      asset: from,
+      title: `Swap ${from} to ${to}`,
+      amount: value,
+      handle: quote.route,
+      method: quote.route,
+      fee: NETWORK_FEE_SUI,
+      got: { asset: to, amount: quote.out },
     });
-    setDone({ tx, label, proceeds });
+    setResult({ tx, quote });
     setStep('done');
   }
 
-  if (step === 'done' && done) {
+  if (step === 'done' && result) {
     return (
-      <Screen title="Withdrawal placed">
+      <Screen title="Swapped">
         <Success
-          title="On its way to your bank"
-          amount={myr(done.proceeds)}
-          sub={`${sui(done.tx.sui)} sold · ${done.label}`}
+          title="Swap complete"
+          amount={`${token(result.quote.out, to)}`}
+          sub={`from ${token(result.quote.amount, from)} · ${quote.route}`}
           details={[
-            { label: 'Rate', value: `1 SUI = ${myr(1)}` },
-            { label: `Fee (${(SELL_FEE_RATE * 100).toFixed(1)}%)`, value: sui(done.tx.fee) },
-            { label: 'Arrives', value: '1–2 business days' },
-            { label: 'New balance', value: sui(balance), strong: true },
+            { label: 'Rate', value: `1 ${from} = ${round(result.quote.rate, 4)} ${to}` },
+            { label: 'Price impact', value: `${(result.quote.priceImpact * 100).toFixed(2)}%` },
+            { label: 'Pool fee', value: token(result.quote.poolFee, from) },
+            { label: 'Network fee', value: token(NETWORK_FEE_SUI) },
           ]}
-          onDone={onExit}
+          doneLabel={onDone ? 'Continue' : 'Done'}
+          onDone={() => (onDone ? onDone(result) : onExit())}
         />
       </Screen>
     );
@@ -517,63 +656,286 @@ export function SellFlow({ balance, banks = seedBanks, onCommit, onExit }) {
   if (step === 'confirm' || step === 'working') {
     const busy = step === 'working';
     return (
-      <Screen title="Confirm withdrawal" onBack={busy ? undefined : () => setStep('form')}>
+      <Screen title="Confirm swap" onBack={busy ? undefined : () => setStep('form')}>
         <div className="tw-hero">
-          <SuiMark size={52} />
-          <p className="tw-hero-amt">− {sui(value)}</p>
-          <p className="tw-hero-sub">you receive {myr(proceeds)}</p>
+          <AssetMark asset={to} size={52} />
+          <p className="tw-hero-amt">{token(quote.out, to)}</p>
+          <p className="tw-hero-sub">for {token(value, from)}</p>
         </div>
 
         <div className="tw-details">
-          <Detail label="To" value={`${bank.brand} •••• ${bank.last4}`} />
-          <Detail label="Rate" value={`1 SUI = ${myr(1)}`} />
-          <Detail label="Amount sold" value={sui(value)} />
-          <Detail label={`Fee (${(SELL_FEE_RATE * 100).toFixed(1)}%)`} value={sui(fee)} />
-          <Detail label="You receive" value={myr(proceeds)} strong />
-          <Detail label="Arrives" value="1–2 business days" />
+          <Detail label="Route" value={quote.route} />
+          <Detail label="Rate" value={`1 ${from} = ${round(quote.rate, 4)} ${to}`} />
+          <Detail label={`Pool fee (${(POOL_FEE_RATE * 100).toFixed(1)}%)`} value={token(quote.poolFee, from)} />
+          <Detail label="Price impact" value={`${(quote.priceImpact * 100).toFixed(2)}%`} />
+          <Detail label="Slippage tolerance" value={`${(quote.slippage * 100).toFixed(1)}%`} />
+          <Detail label="Network fee" value={token(NETWORK_FEE_SUI)} />
+          <Detail label="Minimum received" value={token(quote.minReceived, to)} strong />
         </div>
 
         <button className="tw-btn" onClick={confirm} disabled={busy}>
-          {busy ? <><span className="tw-spin" /> Placing withdrawal</> : 'Confirm withdrawal'}
+          {busy ? <><span className="tw-spin" /> Swapping</> : 'Confirm swap'}
         </button>
       </Screen>
     );
   }
 
   return (
-    <Screen title="Sell SUI" onBack={onExit}>
-      <AmountField
-        value={amount}
-        onChange={setAmount}
-        sub={value > 0 ? `You receive ${myr(proceeds)}` : `Available ${sui(balance)}`}
-        max={round(balance)}
-        onMax={() => setAmount(String(round(balance)))}
-        error={amountError}
-        autoFocus
-      />
-
-      <div className="tw-label tw-label--sp">Send ringgit to</div>
-      <div className="tw-list">
-        {banks.map((b) => (
-          <MethodRow
-            key={b.id}
-            mark={<IcBank width={20} height={20} />}
-            title={`${b.brand} •••• ${b.last4}`}
-            sub={b.sub}
-            on={b.id === pick}
-            onClick={() => setPick(b.id)}
+    <Screen title="Swap" onBack={onExit}>
+      <div className="tw-leg">
+        <div className="tw-leg-head">
+          <span className="tw-label">You pay</span>
+          <span className="tw-leg-bal">Balance {token(held, from)}</span>
+        </div>
+        <div className="tw-leg-body">
+          <AssetMark asset={from} size={34} />
+          <span className="tw-leg-sym">{from}</span>
+          <input
+            className="tw-leg-input"
+            inputMode="decimal"
+            placeholder="0"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1'))}
+            aria-label={`Amount in ${from}`}
+            autoFocus
           />
-        ))}
+          <button className="tw-max" onClick={() => setAmount(String(max))}>Max</button>
+        </div>
       </div>
 
-      <div className="tw-details">
-        <Detail label="Amount" value={sui(value)} />
-        <Detail label={`Fee (${(SELL_FEE_RATE * 100).toFixed(1)}%)`} value={sui(fee)} />
-        <Detail label="You receive" value={myr(proceeds)} strong />
+      <div className="tw-leg-swap">
+        <button className="tw-icon-btn" onClick={() => { setFrom(to); setAmount(''); }} aria-label="Swap direction">
+          <IcSwap width={20} height={20} />
+        </button>
       </div>
 
-      <button className="tw-btn" disabled={value <= 0 || !!amountError} onClick={() => setStep('confirm')}>
-        Continue
+      <div className="tw-leg">
+        <div className="tw-leg-head">
+          <span className="tw-label">You receive</span>
+          <span className="tw-leg-bal">Balance {token(balances[to] ?? 0, to)}</span>
+        </div>
+        <div className="tw-leg-body">
+          <AssetMark asset={to} size={34} />
+          <span className="tw-leg-sym">{to}</span>
+          <span className="tw-leg-out">{value > 0 ? token(quote.out, to, { bare: true }) : '0'}</span>
+        </div>
+      </div>
+
+      {error && <p className="tw-error">{error}</p>}
+
+      <div className="tw-details" style={{ marginTop: 24 }}>
+        <Detail label="Route" value={quote.route} />
+        <Detail label="Rate" value={`1 ${from} = ${round(quote.rate, 4)} ${to}`} />
+        <Detail label="Price impact" value={`${(quote.priceImpact * 100).toFixed(2)}%`} />
+      </div>
+
+      <button className="tw-btn" disabled={value <= 0 || !!error} onClick={() => setStep('confirm')}>
+        Review swap
+      </button>
+    </Screen>
+  );
+}
+
+/* ================================================================== */
+/* Sell — swap to a stablecoin, then off-ramp it to ringgit            */
+/* ================================================================== */
+
+/**
+ * The real procedure, in the order it really happens:
+ *
+ *   1. SUI is swapped on chain for USDT. Nothing has left the wallet yet.
+ *   2. The USDT is sold to an off-ramp, which pays ringgit into a Touch 'n Go
+ *      wallet or a bank account.
+ *
+ * Two steps, two fees, two entries in the history — because that is what it
+ * costs, and a single "sell" button hides the half of it that is not free.
+ */
+export function SellFlow({ balances, rails = payoutRails, onCommit, onExit }) {
+  const [phase, setPhase] = useState('choose');  // choose | swap | payout | review | working | done
+  const [usdt, setUsdt] = useState('');
+  const [railId, setRailId] = useState(rails[0]?.id ?? null);
+  const [swapped, setSwapped] = useState(null);
+  const [done, setDone] = useState(null);
+
+  const rail = rails.find((r) => r.id === railId) ?? rails[0];
+  const held = balances.USDT ?? 0;
+  const value = Number(usdt) || 0;
+  const quote = useMemo(() => payoutQuote({ usdt: value, rail }), [value, rail]);
+
+  const error =
+    !usdt ? null
+    : value <= 0 ? 'Enter an amount greater than zero.'
+    : value > held ? `You hold ${token(held, 'USDT')}.`
+    : quote.belowMinimum ? `${rail.brand} pays out from ${cash(rail.min)}.`
+    : quote.aboveMaximum ? `${rail.brand} takes at most ${cash(rail.max)} per payout.`
+    : null;
+
+  async function confirm() {
+    setPhase('working');
+    await new Promise((r) => setTimeout(r, 1700));
+    const label = `${rail.brand} •••• ${rail.last4}`;
+    const tx = onCommit({
+      dir: 'out',
+      kind: 'cashout',
+      asset: 'USDT',
+      title: `Cash out to ${rail.short}`,
+      amount: value,
+      handle: label,
+      method: label,
+      note: `Payout ${cash(quote.receiveMyr)}`,
+      fiatMyr: quote.receiveMyr,    // what lands in the account, not the gross
+      fee: quote.feeUsdt,
+    });
+    setDone({ tx, rail, quote });
+    setPhase('done');
+  }
+
+  /* ---- finished ---- */
+  if (phase === 'done' && done) {
+    return (
+      <Screen title="Payout placed">
+        <Success
+          title={`On its way to ${done.rail.brand}`}
+          amount={cash(done.quote.receiveMyr)}
+          sub={`${token(done.tx.amount, 'USDT')} sold · •••• ${done.rail.last4}`}
+          details={[
+            { label: 'Rate', value: `1 USDT = ${cash(done.quote.rate)}` },
+            { label: 'Off-ramp fee', value: cash(done.quote.feeMyr) },
+            { label: 'Reference', value: done.tx.digest.slice(0, 12).toUpperCase() },
+            { label: 'Arrives', value: done.rail.eta, strong: true },
+          ]}
+          onDone={onExit}
+        />
+        {swapped && (
+          <p className="tw-fine">
+            This cash-out took two steps: {token(swapped.quote.amount)} swapped for
+            {' '}{token(swapped.quote.out, 'USDT')}, then sold for ringgit. Both are in your history.
+          </p>
+        )}
+      </Screen>
+    );
+  }
+
+  /* ---- step 2, confirming ---- */
+  if (phase === 'review' || phase === 'working') {
+    const busy = phase === 'working';
+    return (
+      <Screen title="Review payout" onBack={busy ? undefined : () => setPhase('payout')}>
+        <div className="tw-hero">
+          <RailMark rail={rail} size={52} />
+          <p className="tw-hero-amt">{cash(quote.receiveMyr)}</p>
+          <p className="tw-hero-sub">to {rail.brand} •••• {rail.last4}</p>
+        </div>
+
+        <div className="tw-details">
+          <Detail label="You sell" value={token(value, 'USDT')} />
+          <Detail label="Rate" value={`1 USDT = ${cash(quote.rate)}`} />
+          <Detail label="Gross" value={cash(quote.grossMyr)} />
+          <Detail label={`Off-ramp fee (${(OFFRAMP_FEE_RATE * 100).toFixed(1)}% + ${cash(OFFRAMP_FLAT_MYR)})`} value={cash(quote.feeMyr)} />
+          <Detail label="You receive" value={cash(quote.receiveMyr)} strong />
+          <Detail label="Arrives" value={rail.eta} />
+        </div>
+
+        <button className="tw-btn" onClick={confirm} disabled={busy}>
+          {busy ? <><span className="tw-spin" /> Placing payout</> : `Sell for ${cash(quote.receiveMyr)}`}
+        </button>
+        <p className="tw-fine">
+          Demo payout. Nothing is sold and no ringgit moves. A real off-ramp is a licensed
+          money-services business and would verify your identity before paying out.
+        </p>
+      </Screen>
+    );
+  }
+
+  /* ---- step 2, amount and destination ---- */
+  if (phase === 'payout') {
+    return (
+      <Screen title="Step 2 · Cash out USDT" onBack={() => setPhase('choose')}>
+        <p className="tw-steps-note">Step 2 of 2 — the stablecoin is what an off-ramp can price in ringgit.</p>
+
+        <AmountField
+          value={usdt}
+          onChange={setUsdt}
+          unit="USDT"
+          sub={value > 0 ? `You receive ${cash(quote.receiveMyr)}` : `Holding ${token(held, 'USDT')}`}
+          max={round(held)}
+          onMax={() => setUsdt(String(round(held)))}
+          error={error}
+          autoFocus
+        />
+
+        <div className="tw-label tw-label--sp">Pay out to</div>
+        <div className="tw-list">
+          {rails.map((r) => (
+            <MethodRow
+              key={r.id}
+              mark={<RailMark rail={r} size={34} />}
+              title={r.brand}
+              sub={`${r.sub} · ${r.etaShort}`}
+              on={r.id === rail?.id}
+              onClick={() => setRailId(r.id)}
+            />
+          ))}
+        </div>
+
+        <div className="tw-details">
+          <Detail label="Gross" value={cash(quote.grossMyr)} />
+          <Detail label="Off-ramp fee" value={cash(quote.feeMyr)} />
+          <Detail label="You receive" value={cash(quote.receiveMyr)} strong />
+        </div>
+
+        <button className="tw-btn" disabled={value <= 0 || !!error} onClick={() => setPhase('review')}>
+          Continue
+        </button>
+      </Screen>
+    );
+  }
+
+  /* ---- step 1, or skip it ---- */
+  if (phase === 'swap') {
+    return (
+      <SwapFlow
+        balances={balances}
+        onCommit={onCommit}
+        onExit={() => setPhase('choose')}
+        onDone={(r) => {
+          setSwapped(r);
+          setUsdt(String(r.quote.out));
+          setPhase('payout');
+        }}
+      />
+    );
+  }
+
+  return (
+    <Screen title="Sell SUI" onBack={onExit}>
+      <p className="tw-steps-note">
+        There is no route from SUI straight to a bank account. It goes in two steps, and
+        this is both of them.
+      </p>
+
+      <ol className="tw-route">
+        <li>
+          <span className="tw-route-n">1</span>
+          <span className="tw-route-b">
+            <span className="tw-route-t">Swap SUI for USDT</span>
+            <span className="tw-route-s">On chain, through {SWAP_ROUTE}. Holding {token(balances.SUI ?? 0)}.</span>
+          </span>
+          <AssetMark asset="USDT" size={30} />
+        </li>
+        <li>
+          <span className="tw-route-n">2</span>
+          <span className="tw-route-b">
+            <span className="tw-route-t">Cash out USDT to ringgit</span>
+            <span className="tw-route-s">Paid into Touch 'n Go or CIMB. Holding {token(held, 'USDT')}.</span>
+          </span>
+          <RailMark rail={rails[0]} size={30} />
+        </li>
+      </ol>
+
+      <button className="tw-btn" onClick={() => setPhase('swap')}>Start with the swap</button>
+      <button className="tw-btn ghost" disabled={held <= 0} onClick={() => setPhase('payout')}>
+        {held > 0 ? `Skip — cash out my ${token(held, 'USDT')}` : 'No USDT to cash out yet'}
       </button>
     </Screen>
   );
@@ -612,18 +974,22 @@ export function HistoryScreen({ txs, onOpen, onExit }) {
 
 export function TxRow({ tx, onOpen }) {
   const incoming = tx.dir === 'in';
+  const isSwap = tx.kind === 'swap';
+  const sign = isSwap ? '−' : incoming ? '+' : '−';
   return (
     <button className="tw-tx" onClick={() => onOpen?.(tx)}>
-      <span className={`tw-tx-icon ${tx.dir}`} aria-hidden="true">
-        {incoming ? <IcReceive width={18} height={18} /> : <IcSend width={18} height={18} />}
+      <span className={`tw-tx-icon ${isSwap ? 'swap' : tx.dir}`} aria-hidden="true">
+        {isSwap ? <IcSwap width={18} height={18} /> : incoming ? <IcReceive width={18} height={18} /> : <IcSend width={18} height={18} />}
       </span>
       <span className="tw-tx-body">
         <span className="tw-tx-t">{tx.title}</span>
         <span className="tw-tx-s">{whenLabel(tx.ts)}</span>
       </span>
       <span className="tw-tx-amt">
-        <span className={incoming ? 'in' : 'out'}>{incoming ? '+' : '−'}{sui(tx.sui)}</span>
-        <span className="tw-tx-fiat">{myr(tx.sui)}</span>
+        <span className={incoming ? 'in' : 'out'}>{sign}{token(tx.amount, tx.asset)}</span>
+        <span className="tw-tx-fiat">
+          {tx.got ? `→ ${token(tx.got.amount, tx.got.asset)}` : tx.fiatMyr != null ? cash(tx.fiatMyr) : fiat(tx.amount, tx.asset)}
+        </span>
       </span>
     </button>
   );
@@ -631,31 +997,38 @@ export function TxRow({ tx, onOpen }) {
 
 export function TxDetail({ tx, onExit }) {
   const incoming = tx.dir === 'in';
-  const KIND = { transfer: 'Transfer', topup: 'Purchase', cashout: 'Withdrawal' };
+  const isSwap = tx.kind === 'swap';
+  const KIND = { transfer: 'Transfer', topup: 'Purchase', cashout: 'Cash out', swap: 'Swap', request: 'Request' };
 
   return (
     <Screen title={KIND[tx.kind] ?? 'Transaction'} onBack={onExit}>
       <div className="tw-hero">
-        <span className={`tw-tx-icon big ${tx.dir}`} aria-hidden="true">
-          {incoming ? <IcReceive width={26} height={26} /> : <IcSend width={26} height={26} />}
+        <span className={`tw-tx-icon big ${isSwap ? 'swap' : tx.dir}`} aria-hidden="true">
+          {isSwap ? <IcSwap width={26} height={26} /> : incoming ? <IcReceive width={26} height={26} /> : <IcSend width={26} height={26} />}
         </span>
-        <p className="tw-hero-amt">{incoming ? '+' : '−'}{sui(tx.sui)}</p>
-        <p className="tw-hero-sub">{myr(tx.sui)}</p>
+        <p className="tw-hero-amt">
+          {isSwap ? token(tx.got.amount, tx.got.asset) : `${incoming ? '+' : '−'}${token(tx.amount, tx.asset)}`}
+        </p>
+        <p className="tw-hero-sub">
+          {isSwap ? `for ${token(tx.amount, tx.asset)}` : fiat(tx.amount, tx.asset)}
+        </p>
       </div>
 
       <div className="tw-details">
-        <Detail label={incoming ? 'From' : 'To'} value={tx.title} />
-        {tx.handle && <Detail label="Account" value={tx.handle} />}
+        <Detail label={isSwap ? 'Route' : incoming ? 'From' : 'To'} value={isSwap ? tx.handle : tx.title} />
+        {!isSwap && tx.handle && <Detail label="Account" value={tx.handle} />}
         <Detail label="Date" value={whenLabel(tx.ts)} />
-        <Detail label="Amount" value={sui(tx.sui)} />
-        <Detail label={tx.kind === 'transfer' ? 'Network fee' : 'Fee'} value={sui(tx.fee)} />
+        <Detail label={isSwap ? 'Sold' : 'Amount'} value={token(tx.amount, tx.asset)} />
+        {tx.got && <Detail label="Received" value={token(tx.got.amount, tx.got.asset)} />}
+        {tx.note && <Detail label="Note" value={tx.note} />}
+        <Detail label={feeOnTop(tx) ? 'Network fee' : 'Fee'} value={token(tx.fee, tx.asset)} />
         <Detail
           label={incoming ? 'Credited' : 'Debited'}
-          value={sui(incoming ? tx.sui : tx.sui + (tx.kind === 'transfer' ? tx.fee : 0))}
+          value={token(incoming ? tx.amount : tx.amount + (feeOnTop(tx) ? tx.fee : 0), tx.asset, { up: !incoming })}
           strong
         />
         <Detail label="Network" value="Sui" />
-        <Detail label="Status" value={tx.real ? 'Settled on chain' : 'Completed (demo)'} />
+        <Detail label="Status" value={tx.pending ? 'Awaiting payment' : tx.real ? 'Settled on chain' : 'Completed (demo)'} />
       </div>
 
       {tx.digest && <CopyField label="Transaction hash" value={tx.digest} lines />}
@@ -673,7 +1046,7 @@ export function TxDetail({ tx, onExit }) {
 /* Settings                                                            */
 /* ================================================================== */
 
-export function SettingsScreen({ profile, address, live, setLive, onExit, onSignOut }) {
+export function SettingsScreen({ profile, address, live, setLive, currency, onCurrency, onExit, onSignOut }) {
   const [reveal, setReveal] = useState(false);
 
   return (
@@ -691,8 +1064,17 @@ export function SettingsScreen({ profile, address, live, setLive, onExit, onSign
       <div className="tw-details">
         <Detail label="Wallet" value="Main Wallet" />
         <Detail label="Network" value="Sui Testnet" />
-        <Detail label="Currency" value="SUI" />
+        <Detail label="Holdings" value="SUI · USDT" />
         <Detail label="Derivation" value="From your Google account" />
+      </div>
+
+      <div className="tw-toggle" role="group">
+        <span className="tw-method-mark"><IcGlobe width={20} height={20} /></span>
+        <span className="tw-method-body">
+          <span className="tw-method-t">Display currency</span>
+          <span className="tw-method-s">{CURRENCIES[currency]?.name ?? currency}</span>
+        </span>
+        <CurrencyPicker value={currency} onChange={onCurrency} />
       </div>
 
       <button className="tw-toggle" role="switch" aria-checked={live} onClick={() => setLive(!live)}>
