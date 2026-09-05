@@ -52,12 +52,12 @@ export function TransactionList({ items, title = 'Activity', onOpen, onSeeAll, t
   );
 }
 
-/** Every row opens its receipt — that is where the digest and the explorer link live. */
+/** Every row opens its receipt, which holds the digest and the explorer link. */
 function Row({ tx, onOpen }) {
   const incoming = tx.dir === 'in';
 
-  /* A swap is not money leaving: the same value comes back in another asset,
-     so it gets the neutral mark and the second line says what arrived. */
+  /* A swap is not money leaving — the value comes back in another asset — so it
+     gets a neutral mark and the second line says what arrived. */
   const isSwap = tx.kind === 'swap';
 
   return (

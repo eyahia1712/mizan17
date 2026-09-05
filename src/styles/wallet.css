@@ -1,18 +1,10 @@
 /* ============================================================
    WALLET
 
-   A wallet app, inside the app — and on Mizan's paper, not on a
-   dark ground of its own. It borrows the tokens from global.css
-   rather than inventing a palette, so the wallet reads as part
-   of the same product and only its *shape* is a wallet's.
-
-   The system's rule still holds here, and is why there is no
-   blue and no green anywhere below:
-
-     ink         you, your account, the primary action
-     vermillion  money leaving, and the live state
-     saffron     a settled event
-     stone       every neutral surface and line
+   A wallet app inside the app, on Mizan's paper rather than a
+   dark ground of its own. It reuses the tokens from global.css
+   instead of inventing a palette, so only its *shape* is a
+   wallet's — which is why there is no blue and no green below.
    ============================================================ */
 
 .tw-scrim {
@@ -41,8 +33,8 @@
   font-size:14.5px; line-height:1.55;
 }
 
-/* :where() keeps the reset at zero added specificity, so a component's own
-   background wins over it instead of losing to `.tw button`. */
+/* :where() keeps the reset at zero specificity, so a component's own background
+   wins instead of losing to `.tw button`. */
 .tw :where(button) { font:inherit; color:inherit; background:none; border:0; cursor:pointer; }
 .tw :where(input)  { font:inherit; color:inherit; }
 .tw h2, .tw h3, .tw h4 { margin:0; font-weight:500; letter-spacing:-.025em; }
@@ -105,7 +97,7 @@
   display:flex; align-items:center; justify-content:center; gap:var(--s2);
   font-size:14px; color:var(--ink-2);
 }
-/* A price move is information, not an alarm — it gets a sign, not a hue. */
+/* A price move gets a sign, not a colour. */
 .tw-delta { font-size:12.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
 
 .tw-addr-pill {
@@ -512,8 +504,7 @@
 }
 .tw-nav-item:hover { color:var(--ink); }
 .tw-nav-item.on { color:var(--ink); }
-/* The rule above the active item is the only vermillion in the bar, and it
-   marks where you are — the same job the chart's current month gets. */
+/* The only vermillion in the bar. It marks where you are. */
 .tw-nav-item.on::before {
   content:'';
   position:absolute; top:calc(var(--s2) * -1 - 1px); left:50%; transform:translateX(-50%);
@@ -534,12 +525,10 @@
 /* ============================================================
    BUYING, SWAPPING, CASHING OUT
 
-   The screens that mirror a real procedure rather than a demo:
-   provider quotes, a two-leg swap, and the route out to ringgit.
+   Provider quotes, a two-leg swap, and the route out to ringgit.
    ============================================================ */
 
-/* Third-party marks keep their own colour — a payment brand is recognised by
-   it, the same exception the Google chooser takes. */
+/* Third-party marks keep their own colour, because a brand is recognised by it. */
 .tw-brand {
   flex:none; border-radius:var(--radius);
   display:grid; place-items:center;
@@ -637,14 +626,13 @@
 .tw-route-t { font-size:14.5px; font-weight:500; }
 .tw-route-s { font-size:12px; color:var(--ink-3); }
 
-/* A swap is neither money in nor money out, so it gets the neutral mark. */
+/* A swap is neither money in nor money out, so it gets a neutral mark. */
 .tw-tx-icon.swap { background:var(--stone); color:var(--ink-2); }
 
 /* ---------- the currency this wallet is counted in ---------- */
 
-/* A native select carries the platform's own picker, which beats anything
-   reimplemented here on a phone — so it stays, invisible, over a face that
-   matches the rest of the wallet. */
+/* A real <select> so the platform's own picker is used on a phone. It sits
+   invisible over a face styled like the rest of the wallet. */
 .tw-cur { position:relative; display:inline-flex; flex:none; }
 .tw-cur-select {
   position:absolute; inset:0;
@@ -662,8 +650,8 @@
 .tw-cur:hover .tw-cur-face,
 .tw-cur-select:focus-visible + .tw-cur-face { border-color:var(--ink); color:var(--ink); }
 
-/* The total and its unit sit on one line, so the currency reads as part of
-   the figure rather than a setting parked somewhere else. */
+/* The total and its currency sit on one line, so the currency reads as part of
+   the figure rather than a setting somewhere else. */
 .tw-total-line { display:flex; align-items:center; justify-content:center; gap:var(--s3); flex-wrap:wrap; }
 
 .tw-toggle .tw-cur { margin-left:auto; }

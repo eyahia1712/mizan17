@@ -1,12 +1,9 @@
 /**
  * The ledger.
  *
- * Every figure the product shows is derived here from one list of
- * transactions: the month chart, the tiles, the wallet totals, the labels on
- * each row. Nothing is a hard-coded summary of something else, so a transfer
- * made in the app moves every number that depends on it at once.
- *
- * Amounts are SUI throughout.
+ * Every figure in the app is derived here from one list of transactions: the
+ * month chart, the tiles, the wallet totals, the row labels. No summary is
+ * stored twice, so one new transfer moves every number that depends on it.
  */
 
 import { digestFor, NETWORK_FEE_SUI, SELL_FEE_RATE } from '../data/mockData.js';
@@ -16,9 +13,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 const at = (ts) => (ts instanceof Date ? ts : new Date(ts));
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
-/* ------------------------------------------------------------------ */
-/* Time                                                                */
-/* ------------------------------------------------------------------ */
+/* ------------------------------ time ----------------------------- */
 
 const clock = (d) =>
   `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -43,27 +38,24 @@ export const monthKey = (ts) => {
 
 export const monthLabel = (key) => MONTHS[Number(key.slice(5)) - 1];
 
-/* ------------------------------------------------------------------ */
-/* Aggregation                                                         */
-/* ------------------------------------------------------------------ */
+/* --------------------------- aggregation ------------------------- */
 
 const amount = (t) => Number(t.amount) || 0;
 
-/** Gas is charged on top of a transfer or a swap; every other fee comes out
-    of the money already moving, so it must not be subtracted twice. */
+/* Gas is charged on top of a transfer or a swap. Every other fee comes out of
+   the money already moving, so it must not be subtracted twice. */
 export const feeOnTop = (t) => t.kind === 'transfer' || t.kind === 'swap';
 
-/** A swap is not money entering or leaving — it is the same money, rephrased. */
+/** A swap is not money entering or leaving, just the same money in another asset. */
 const movesValue = (t) => t.kind !== 'swap';
 
-/** A requested payment has not arrived. It is on the list, not in the totals. */
+/** A requested payment has not arrived, so it stays out of the totals. */
 export const settled = (t) => !t.pending;
 
 /**
- * What a transaction does to the balances. Returns a sparse map keyed by
- * asset, because one entry can touch two of them: a swap spends SUI and
- * credits USDT, and recording that as two separate rows would let the two
- * halves drift apart.
+ * What a transaction does to the balances, as a map keyed by asset. One entry
+ * can touch two assets — a swap spends SUI and credits USDT — so both halves
+ * are computed together and cannot drift apart.
  */
 export function balanceDelta(t) {
   if (t.pending) return {};
@@ -91,11 +83,10 @@ export function applyTx(balances, t) {
 }
 
 /**
- * Sent, received, fees and count over whatever slice you hand it.
+ * Sent, received, fees and counts over any slice of the list.
  *
- * Only SUI is counted, and swaps are left out of both directions: the account
- * page reports what left and what arrived, and a swap did neither. Its gas
- * still shows up under fees, because that was really paid.
+ * Swaps are left out of both directions — nothing left or arrived — but their
+ * gas still counts as a fee, because that was really paid.
  */
 export function totals(items, asset = 'SUI') {
   return items.filter(settled).reduce(
@@ -113,9 +104,8 @@ export function totals(items, asset = 'SUI') {
 }
 
 /**
- * The last `count` calendar months ending with the current one, each with its
- * own totals. Months with no activity still appear — a gap in the chart is
- * information, and dropping it would misdate every bar beside it.
+ * The last `count` calendar months ending with this one, each with its own
+ * totals. Empty months still appear, or the bars beside them would be misdated.
  */
 export function monthlySeries(items, count = 6, now = new Date()) {
   const buckets = new Map();
@@ -134,29 +124,21 @@ export function monthlySeries(items, count = 6, now = new Date()) {
   return [...buckets.values()].map((b) => ({ ...b, ...totals(b.items) }));
 }
 
-/** Newest first. The lists are short; a copy keeps callers honest. */
+/** Newest first. Copies rather than sorting the caller's array in place. */
 export const byNewest = (items) => [...items].sort((a, b) => at(b.ts) - at(a.ts));
 
-/* ------------------------------------------------------------------ */
-/* Spending rules                                                      */
-/* ------------------------------------------------------------------ */
+/* -------------------------- spending rules ----------------------- */
 
 export { NETWORK_FEE_SUI, SELL_FEE_RATE };
 
-/**
- * What a transfer actually costs the balance. The fee is not optional and not
- * absorbed somewhere else, so it belongs in the number we check against.
- */
+/** What a transfer costs the balance, fee included. */
 export const totalCost = (amountSui, fee = NETWORK_FEE_SUI) => (Number(amountSui) || 0) + fee;
 
 /** The largest amount that can still be sent once the fee is paid. */
 export const sendableFrom = (balance, fee = NETWORK_FEE_SUI) =>
   Math.max(0, round(balance - fee));
 
-/**
- * Why an amount cannot be sent, or null when it can. Returning the reason
- * rather than a boolean is what lets the button explain itself.
- */
+/** Why an amount cannot be sent, or null when it can. */
 export function checkAmount(value, balance, fee = NETWORK_FEE_SUI) {
   const v = Number(value);
   if (!value) return null;                       // nothing typed yet is not an error
@@ -168,20 +150,16 @@ export function checkAmount(value, balance, fee = NETWORK_FEE_SUI) {
   return null;
 }
 
-/** SUI has 9 decimals; carrying more than four is noise in a wallet. */
+/** SUI has 9 decimals, but more than four is noise in a wallet. */
 export const round = (n, dp = 4) => Math.round((Number(n) || 0) * 10 ** dp) / 10 ** dp;
 
-/* ------------------------------------------------------------------ */
-/* Writing to the ledger                                               */
-/* ------------------------------------------------------------------ */
+/* ---------------------- writing to the ledger -------------------- */
 
 let seq = 0;
 
 /**
- * One shape for every new entry, whoever created it.
- *
- * `pending` has to survive this call: it is what keeps a split request off the
- * balance and out of the totals until someone actually pays it.
+ * One shape for every new entry, whichever screen created it. `pending` keeps
+ * a split request off the balance until someone actually pays it.
  */
 export function makeTx({
   dir, title, amount: value, asset = 'SUI', kind = 'transfer',
@@ -201,13 +179,11 @@ export function makeTx({
     method,
     note,
     toAddress,
-    /* What this cost or paid, in ringgit, when that is not simply the amount at
-       today's rate — a cash-out nets a fee off, a purchase adds one on. Kept as
-       a figure, not a formatted string, so it follows the chosen currency. */
+    /* What was really charged or paid in ringgit, when that is not just the
+       amount at today's rate. Stored as a number so it follows the currency. */
     fiatMyr,
     fee: round(fee ?? (dir === 'out' ? NETWORK_FEE_SUI : 0)),
-    /* A swap credits a second asset; carrying it on the same entry is what
-       keeps the two halves from ever disagreeing. */
+    /* A swap credits a second asset, carried on the same entry. */
     got: got ? { asset: got.asset, amount: round(got.amount) } : null,
     digest: digest ?? digestFor(id),
     real,

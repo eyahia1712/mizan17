@@ -6,23 +6,19 @@ import { parseCommand, fillGap, isYes, isNo } from '../lib/commands.js';
 import { voiceSupported, createEar, createLevelMeter, detectWake, say, hush, chime } from '../lib/voice.js';
 
 /**
- * Trisha.
+ * Trisha, the voice assistant.
  *
  * Nothing is on screen until she is called. She listens for her name, opens,
  * takes the sentence, fills the transaction in and reads it back — and only
  * moves money once someone has said yes out loud.
  *
- * That last part is not caution for its own sake. "Eighty" and "eighteen" are
- * one mishearing apart and that difference is somebody's rent, so the figure
- * gets shown and spoken before it is spent. It is what Siri does with a
- * payment, and for the same reason.
+ * The confirmation is the point: "eighty" and "eighteen" are one mishearing
+ * apart, and that difference is somebody's rent.
  */
 
 const SLEEP_AFTER = 12_000;          // close if the conversation goes quiet
 
-/* Called by name and nothing else, she answers and then gets out of the way.
-   Reciting what she can do is the sort of thing an assistant does once, in a
-   manual — not every time you say her name. */
+/* She answers and gets out of the way rather than reciting what she can do. */
 const GREETING = "Aha, I'm listening.";
 const EXAMPLE = 'Try: “send twenty to Ayesha”';
 
@@ -48,9 +44,7 @@ export default function Trisha({ balances, live, onSend, onOpenWallet }) {
 
   const awake = phase !== 'idle';
 
-  /* ---------------------------------------------------------------- */
-  /* Talking                                                           */
-  /* ---------------------------------------------------------------- */
+  /* ---------------------------- speaking --------------------------- */
 
   const speak = useCallback((text, hintLine = null) => {
     setLine(text);
@@ -84,9 +78,7 @@ export default function Trisha({ balances, live, onSend, onOpenWallet }) {
     sleepRef.current = setTimeout(() => sleep(null), SLEEP_AFTER);
   }, [sleep]);
 
-  /* ---------------------------------------------------------------- */
-  /* Doing                                                             */
-  /* ---------------------------------------------------------------- */
+  /* ----------------------------- acting ---------------------------- */
 
   const describe = useCallback((next) => {
     if (next.kind === 'send') {
@@ -118,8 +110,8 @@ export default function Trisha({ balances, live, onSend, onOpenWallet }) {
       const words = { buy: 'buying', swap: 'the swap', cashout: 'cashing out' }[next.kind];
       setPhase('done');
       speak(`Opening ${words}.`);
-      // These pick a provider or a payout rail, and that is a choice to make
-      // by eye — she opens the screen rather than deciding it for you.
+      // These need a provider or a payout rail chosen by eye, so she opens the
+      // screen with the amount filled in rather than deciding it.
       setTimeout(() => { onOpenWallet?.(screen, next.amount ?? null); sleep(null); }, 900);
       return;
     }
@@ -129,10 +121,9 @@ export default function Trisha({ balances, live, onSend, onOpenWallet }) {
   }, [balances, speak, onOpenWallet, sleep]);
 
   /**
-   * One door into acting on an intent, so a command said in one breath —
-   * "Hey Trisha, send money to Nurul" — asks the same follow-up question as
-   * one said in two. Having the wake path call `describe` directly was how a
-   * missing amount turned into "enter an amount greater than zero".
+   * The one way an intent is acted on, so a command said in one breath — "Hey
+   * Trisha, send money to Nurul" — asks the same follow-up question as one said
+   * in two.
    */
   const route = useCallback((next) => {
     if (next.kind === 'cancel') { sleep('dismissed'); return; }
@@ -166,17 +157,14 @@ export default function Trisha({ balances, live, onSend, onOpenWallet }) {
     }
   }, [onSend, speak, sleep]);
 
-  /* ---------------------------------------------------------------- */
-  /* Hearing                                                           */
-  /* ---------------------------------------------------------------- */
+  /* ---------------------------- hearing ---------------------------- */
 
   const handle = useCallback((text, final) => {
     const phaseNow = phaseRef.current;
 
-    /* Her name is stripped wherever it appears. Chrome delivers the same
-       utterance twice — interim, then final — so without this the final
-       "hey trisha" arrives after she has already woken and gets read as a
-       command she cannot understand. */
+    /* Her name is stripped wherever it appears. Chrome delivers each utterance
+       twice — interim, then final — so without this the final "hey trisha"
+       arrives after she has woken and reads as a command she cannot place. */
     const wake = detectWake(text);
     const body = (wake ? wake.rest : text).trim();
 
@@ -192,10 +180,8 @@ export default function Trisha({ balances, live, onSend, onOpenWallet }) {
 
       if (!final) return;                 // the rest of the sentence is still coming
 
-      // "Hey Trisha, send twenty to Ayesha" arrives as one sentence — no
-      // reason to make someone say it twice, and no reason to greet first.
-      // Anything else said in that breath gets answered as what it is, so a
-      // command she cannot do is admitted rather than covered with a hello.
+      // "Hey Trisha, send twenty to Ayesha" arrives as one sentence, so act on
+      // it rather than greeting and making someone say it again.
       if (body) { route(parseCommand(body, { recipients: loadRecipients() })); return; }
 
       greet();
@@ -221,7 +207,7 @@ export default function Trisha({ balances, live, onSend, onOpenWallet }) {
     const recipients = loadRecipients();
     const pending = intentRef.current;
 
-    // Answering a question she asked, rather than starting again
+    // Answering a question she asked, rather than starting a new command
     const next = pending?.missing
       ? fillGap(pending, body, { recipients })
       : parseCommand(body, { recipients });
@@ -229,9 +215,7 @@ export default function Trisha({ balances, live, onSend, onOpenWallet }) {
     route(next);
   }, [greet, route, run, sleep, speak, stayAwake]);
 
-  /* ---------------------------------------------------------------- */
-  /* Wiring                                                            */
-  /* ---------------------------------------------------------------- */
+  /* ----------------------------- wiring ---------------------------- */
 
   useEffect(() => {
     if (!voiceSupported()) return;
@@ -254,8 +238,7 @@ export default function Trisha({ balances, live, onSend, onOpenWallet }) {
     };
   }, [handle]);
 
-  /* The orb follows the microphone, so it moves with the voice rather than
-     looping an animation that has nothing to do with what is being said. */
+  /* The orb follows the microphone level, so it moves with the voice. */
   useEffect(() => {
     if (!awake) { setLevel(0); return; }
     const tick = () => {
@@ -266,9 +249,8 @@ export default function Trisha({ balances, live, onSend, onOpenWallet }) {
     return () => cancelAnimationFrame(rafRef.current);
   }, [awake]);
 
-  /* A keyboard seam: the same path the microphone takes, without a
-     microphone. It is how this gets tested, and it is the fallback on a
-     browser that cannot listen. */
+  /* The same path the microphone takes, from a typed sentence. Used for testing
+     and as a fallback on a browser that cannot listen. */
   useEffect(() => {
     const onHear = (e) => handle(String(e.detail ?? ''), true);
     window.addEventListener('trisha:hear', onHear);
@@ -286,9 +268,8 @@ export default function Trisha({ balances, live, onSend, onOpenWallet }) {
 
   /* ---------------------------------------------------------------- */
 
-  /* The badge is not a control — it is the only sign this exists at all. It
-     stays put, bottom right, for the person who has no way of knowing they can
-     talk to the page. She opens above it when called. */
+  /* The badge is not a control. It is the only sign the feature exists, for
+     someone who would otherwise never know they can talk to the page. */
   const badge = denied ? (
     <div className="tr-hint tr-hint--warn" role="status">
       Trisha needs the microphone. Allow it in the address bar, then reload.
@@ -353,11 +334,7 @@ export default function Trisha({ balances, live, onSend, onOpenWallet }) {
 
 /* ------------------------------------------------------------------ */
 
-/**
- * The orb. Three soft fields of the app's own colour that turn against each
- * other and swell with the voice — the one place in this product with a blur
- * in it, because a flat disc does not read as listening.
- */
+/** The orb: three soft fields that turn against each other and swell with the voice. */
 function Orb({ level, phase }) {
   const scale = 1 + Math.min(level, 1) * 0.34;
   return (

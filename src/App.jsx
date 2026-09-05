@@ -8,11 +8,11 @@ import Wallet from './components/wallet/Wallet.jsx';
 import Trisha from './components/Trisha.jsx';
 import { user as demoUser, transactions as seedTransactions } from './data/mockData.js';
 import { loadOrCreateKeypair, keypairForSubject, getBalanceSui, sendSui } from './lib/sui.js';
-import { makeTx, applyTx, round, byNewest, NETWORK_FEE_SUI } from './lib/ledger.js';
+import { makeTx, applyTx, byNewest, NETWORK_FEE_SUI } from './lib/ledger.js';
 import { token, shortAddr } from './lib/format.js';
 import { getCurrency, setCurrency } from './lib/currency.js';
 
-/** How many rows the account page shows before handing over to the wallet. */
+/** How many activity rows the account page shows before the wallet takes over. */
 const ACTIVITY_ROWS = 6;
 
 /** The wallet's mark, small enough to sit inside a button. */
@@ -36,15 +36,14 @@ export default function App() {
   const [walletPrefill, setWalletPrefill] = useState(null);
   const [chainBalance, setChainBalance] = useState(null);
 
-  /* The formatters read the active currency from the module, and this is the
-     only thing that sets it — so changing it here re-renders everything that
-     prints money. */
+  /* The formatters read the active currency from lib/currency.js, and this is
+     the only place that sets it, so changing it re-renders every money figure. */
   const [currency, setCurrencyState] = useState(getCurrency);
   const chooseCurrency = useCallback((code) => setCurrencyState(setCurrency(code)), []);
 
-  /* One balance sheet, one list of transactions. Every figure in the product —
-     the card, the tiles, the chart, the wallet — is read off these two. The
-     sheet has two assets because cashing out goes through a stablecoin. */
+  /* One balance sheet and one list of transactions. Every figure in the app —
+     the card, the tiles, the chart, the wallet — comes from these two. There are
+     two assets because cashing out goes through a stablecoin. */
   const [balances, setBalances] = useState({ SUI: demoUser.balanceSui, USDT: demoUser.balanceUsdt });
   const [txs, setTxs] = useState(seedTransactions);
 
@@ -52,8 +51,8 @@ export default function App() {
 
   const sheetRef = useRef(null);
 
-  // The wallet is derived from the Google account, so it is the same address
-  // every time that person signs in — on any machine.
+  // The keypair is derived from the Google account, so the same person gets the
+  // same address every time they sign in, on any machine.
   useEffect(() => {
     if (!profile) return;
     let cancelled = false;
@@ -70,8 +69,8 @@ export default function App() {
     return () => { cancelled = true; };
   }, [profile]);
 
-  /* Live transfers spend real testnet coins, so what can be sent is what the
-     account actually holds on chain — not what the demo balance says. */
+  /* Live transfers spend real testnet coins, so the spendable amount is what
+     the account holds on chain, not what the demo balance says. */
   useEffect(() => {
     if (!live || !address) { setChainBalance(null); return; }
     let cancelled = false;
@@ -97,9 +96,8 @@ export default function App() {
   }, [sheet, closeSheet]);
 
   /**
-   * The single way anything is written to the ledger. It returns the entry it
-   * created so the screen that asked for it can show a receipt without
-   * inventing its own copy of the numbers.
+   * The one way anything is written to the ledger. Returns the entry it created,
+   * so the screen that asked for it can build a receipt from the same numbers.
    */
   const commit = useCallback((partial) => {
     const tx = makeTx(partial);
@@ -114,11 +112,7 @@ export default function App() {
     setWallet(screen);
   }, [closeSheet]);
 
-  /**
-   * One transfer, wherever it was asked for — the send sheet, the wallet, or
-   * out loud. Keeping it here means live mode and the ledger are handled once
-   * rather than in every screen that can spend.
-   */
+  /** One transfer, wherever it was asked for — the sheet, the wallet or Trisha. */
   const sendTo = useCallback(async ({ recipient, amount }) => {
     let digest;
     if (live) {
@@ -141,9 +135,9 @@ export default function App() {
   }, [live, keypair, commit]);
 
   function recordRequest({ reason, heads, each, from }) {
-    // A request is not money that has arrived: it goes on the list and stays
-    // out of the balance and the totals until it is paid. The occasion travels
-    // with it, because that is what makes it recognisable a week later.
+    // A request is not money that has arrived. It goes on the list but stays out
+    // of the balance and the totals until it is paid, and it carries the occasion
+    // so it is still recognisable a week later.
     commit({
       dir: 'in',
       kind: 'request',
@@ -199,8 +193,7 @@ export default function App() {
           </section>
         </div>
 
-        {/* A wall of rows is a database dump, not an account page. The recent
-            few belong here; the rest live in the wallet's history. */}
+        {/* Only the recent few belong here; the rest live in the wallet's history. */}
         <TransactionList
           items={byNewest(txs).slice(0, ACTIVITY_ROWS)}
           total={txs.length}
@@ -265,7 +258,7 @@ export default function App() {
         />
       )}
 
-      {/* Nothing on screen until she is called by name. */}
+      {/* Renders nothing until she is called by name. */}
       <Trisha
         balances={balances}
         live={live}

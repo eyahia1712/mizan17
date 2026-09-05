@@ -19,9 +19,7 @@ import {
 } from './WalletUI.jsx';
 import { CURRENCIES } from '../../lib/currency.js';
 
-/* ================================================================== */
-/* Send                                                                */
-/* ================================================================== */
+/* ============================== send ============================== */
 
 export function SendFlow({ balance, address, live, keypair, spendable, onCommit, onExit }) {
   const [step, setStep] = useState('form');     // form | confirm | sending | done
@@ -32,8 +30,8 @@ export function SendFlow({ balance, address, live, keypair, spendable, onCommit,
   const [error, setError] = useState(null);
   const [done, setDone] = useState(null);
 
-  // A live transfer spends real testnet coins, so the limit is what the
-  // account holds on chain — not the demo balance.
+  // A live transfer spends real testnet coins, so the limit is what the account
+  // holds on chain, not the demo balance.
   const limit = live ? (spendable ?? 0) : balance;
 
   const value = Number(amount) || 0;
@@ -53,8 +51,8 @@ export function SendFlow({ balance, address, live, keypair, spendable, onCommit,
       } else {
         await new Promise((r) => setTimeout(r, 1400));
       }
-      // A recipient you have now paid is one you should not have to type again.
-      const name = named?.name ?? saveAs.trim() ?? '';
+      // Save an address you have now paid, so it is not typed twice.
+      const name = named?.name ?? saveAs.trim();
       if (!named) {
         saveRecipient({ name: saveAs.trim() || shortAddr(to.trim(), 8, 6), address: to.trim() });
         setPeople(loadRecipients());
@@ -64,7 +62,8 @@ export function SendFlow({ balance, address, live, keypair, spendable, onCommit,
         dir: 'out',
         kind: 'transfer',
         title: name || shortAddr(to.trim(), 8, 6),
-        sui: value,
+        asset: 'SUI',
+        amount: value,
         handle: named?.handle ?? shortAddr(to.trim(), 8, 6),
         fee: NETWORK_FEE_SUI,
         digest,
@@ -207,9 +206,7 @@ export function SendFlow({ balance, address, live, keypair, spendable, onCommit,
   );
 }
 
-/* ================================================================== */
-/* Receive                                                             */
-/* ================================================================== */
+/* ============================ receive ============================= */
 
 export function ReceiveScreen({ address, onExit }) {
   return (
@@ -234,16 +231,13 @@ export function ReceiveScreen({ address, onExit }) {
   );
 }
 
-/* ================================================================== */
-/* Buy — the on-ramp, the way one actually works                       */
-/* ================================================================== */
+/* ============================== buy =============================== */
 
 /**
- * A wallet does not sell you the coin. It shops the order to licensed
- * on-ramp providers, shows what each would deliver for the same cash, and
- * hands the payment off to whichever you pick. That is four decisions —
- * amount, provider, payment method, confirm — and collapsing them into one
- * screen is what made the earlier version read as a mock-up.
+ * The on-ramp, the way one actually works. A wallet does not sell you the coin:
+ * it shops the order to licensed providers, shows what each would deliver for
+ * the same cash, and hands the payment to whichever you pick. Four steps —
+ * amount, provider, payment method, confirm.
  */
 
 const cardBrand = (number) => {
@@ -277,8 +271,8 @@ export function BuyFlow({ address, rails, prefill = null, onAddCard, onCommit, o
 
   async function confirm() {
     setStep('working');
-    // Identity, then payment, then delivery — the three things a real order
-    // waits on, in the order it waits on them.
+    // Identity, payment, delivery — the three things a real order waits on, in
+    // the order it waits on them.
     for (const n of [1, 2, 3]) {
       await new Promise((r) => setTimeout(r, 900));
       setProgress(n);
@@ -293,8 +287,8 @@ export function BuyFlow({ address, rails, prefill = null, onAddCard, onCommit, o
       handle: label,
       method: label,
       note: `${provider.name} order`,
-      fiatMyr: value,               // what was actually charged, fee included
-      fee: 0,                       // the provider's cut is billed in cash, not taken in SUI
+      fiatMyr: value,               // what was charged, fee included
+      fee: 0,                       // the provider's cut is billed in cash, not in SUI
     });
     setDone({ tx, provider, rail, spend: value });
     setStep('done');
@@ -304,7 +298,7 @@ export function BuyFlow({ address, rails, prefill = null, onAddCard, onCommit, o
     return <AddCard onCancel={() => setStep('pay')} onSave={(card) => { onAddCard(card); setRailId(card.id); setStep('pay'); }} />;
   }
 
-  /* ---- 4. delivered ---- */
+  /* ---- step 4: delivered ---- */
   if (step === 'done' && done) {
     return (
       <Screen title="Order complete">
@@ -325,7 +319,7 @@ export function BuyFlow({ address, rails, prefill = null, onAddCard, onCommit, o
     );
   }
 
-  /* ---- 3. paying ---- */
+  /* ---- step 3: paying ---- */
   if (step === 'working') {
     const stages = [
       `Identity verified with ${provider.name}`,
@@ -354,7 +348,7 @@ export function BuyFlow({ address, rails, prefill = null, onAddCard, onCommit, o
     );
   }
 
-  /* ---- 2b. review ---- */
+  /* ---- step 2b: review ---- */
   if (step === 'review') {
     return (
       <Screen title="Review order" onBack={() => setStep('pay')}>
@@ -385,7 +379,7 @@ export function BuyFlow({ address, rails, prefill = null, onAddCard, onCommit, o
     );
   }
 
-  /* ---- 2a. payment method ---- */
+  /* ---- step 2a: payment method ---- */
   if (step === 'pay') {
     return (
       <Screen title="Pay with" onBack={() => setStep('provider')}>
@@ -416,7 +410,7 @@ export function BuyFlow({ address, rails, prefill = null, onAddCard, onCommit, o
     );
   }
 
-  /* ---- 1b. provider comparison ---- */
+  /* ---- step 1b: compare providers ---- */
   if (step === 'provider') {
     return (
       <Screen title="Choose a provider" onBack={() => setStep('amount')}>
@@ -458,11 +452,11 @@ export function BuyFlow({ address, rails, prefill = null, onAddCard, onCommit, o
     );
   }
 
-  /* ---- 1a. amount ---- */
+  /* ---- step 1a: amount ---- */
   return (
     <Screen title="Buy SUI" onBack={onExit}>
-      {/* Fiat first: you decide what to spend, not what to receive — the
-          provider's rate settles the rest. */}
+      {/* Ringgit first: you decide what to spend, and the provider's rate
+          settles how much SUI that buys. */}
       <AmountField
         value={spend}
         onChange={setSpend}
@@ -587,14 +581,12 @@ function AddCard({ onSave, onCancel }) {
   );
 }
 
-/* ================================================================== */
-/* Swap                                                                */
-/* ================================================================== */
+/* ============================== swap ============================== */
 
 /**
- * SUI to USDT and back, through a pool. This is a screen in its own right and
- * it is also step one of cashing out, because there is no route from SUI
- * straight to a bank account — the stablecoin is what an off-ramp can price.
+ * SUI to USDT and back, through a pool. A screen in its own right, and also
+ * step one of cashing out — there is no route from SUI straight to a bank
+ * account, and USDT is what an off-ramp can price.
  */
 export function SwapFlow({ balances, prefill = null, onCommit, onExit, onDone }) {
   const [from, setFrom] = useState('SUI');
@@ -736,19 +728,17 @@ export function SwapFlow({ balances, prefill = null, onCommit, onExit, onDone })
   );
 }
 
-/* ================================================================== */
-/* Sell — swap to a stablecoin, then off-ramp it to ringgit            */
-/* ================================================================== */
+/* ============================== sell ============================== */
 
 /**
- * The real procedure, in the order it really happens:
+ * Cashing out, in the order it really happens:
  *
  *   1. SUI is swapped on chain for USDT. Nothing has left the wallet yet.
  *   2. The USDT is sold to an off-ramp, which pays ringgit into a Touch 'n Go
  *      wallet or a bank account.
  *
- * Two steps, two fees, two entries in the history — because that is what it
- * costs, and a single "sell" button hides the half of it that is not free.
+ * Two steps, two fees, two entries in the history. A single "sell" button would
+ * hide the half of it that is not free.
  */
 export function SellFlow({ balances, rails = payoutRails, onCommit, onExit }) {
   const [phase, setPhase] = useState('choose');  // choose | swap | payout | review | working | done
@@ -816,7 +806,7 @@ export function SellFlow({ balances, rails = payoutRails, onCommit, onExit }) {
     );
   }
 
-  /* ---- step 2, confirming ---- */
+  /* ---- step 2: confirming ---- */
   if (phase === 'review' || phase === 'working') {
     const busy = phase === 'working';
     return (
@@ -847,7 +837,7 @@ export function SellFlow({ balances, rails = payoutRails, onCommit, onExit }) {
     );
   }
 
-  /* ---- step 2, amount and destination ---- */
+  /* ---- step 2: amount and destination ---- */
   if (phase === 'payout') {
     return (
       <Screen title="Step 2 · Cash out USDT" onBack={() => setPhase('choose')}>
@@ -891,7 +881,7 @@ export function SellFlow({ balances, rails = payoutRails, onCommit, onExit }) {
     );
   }
 
-  /* ---- step 1, or skip it ---- */
+  /* ---- step 1: the swap, or skip it ---- */
   if (phase === 'swap') {
     return (
       <SwapFlow
@@ -941,9 +931,7 @@ export function SellFlow({ balances, rails = payoutRails, onCommit, onExit }) {
   );
 }
 
-/* ================================================================== */
-/* History                                                             */
-/* ================================================================== */
+/* ============================ history ============================= */
 
 export function HistoryScreen({ txs, onOpen, onExit }) {
   const groups = useMemo(() => {
@@ -1042,9 +1030,7 @@ export function TxDetail({ tx, onExit }) {
   );
 }
 
-/* ================================================================== */
-/* Settings                                                            */
-/* ================================================================== */
+/* ============================ settings ============================ */
 
 export function SettingsScreen({ profile, address, live, setLive, currency, onCurrency, onExit, onSignOut }) {
   const [reveal, setReveal] = useState(false);

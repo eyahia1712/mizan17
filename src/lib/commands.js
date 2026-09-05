@@ -1,19 +1,16 @@
 /**
- * Turning what someone said into something the app can do.
+ * Turns a spoken sentence into something the app can do.
  *
- * No model and no network: the commands this assistant accepts are narrow
- * enough that a parser beats a language model on every axis that matters here
- * — it answers instantly, it works with the wifi down, and it cannot invent a
- * recipient who does not exist. A wrong guess about money is not a typo.
+ * No model and no network. The set of commands is small enough that a parser
+ * beats an LLM here: it answers instantly, works offline, and cannot invent a
+ * recipient who does not exist.
  */
 
-/* ------------------------------------------------------------------ */
-/* Numbers, as people say them                                         */
-/* ------------------------------------------------------------------ */
+/* --------------------- numbers, as people say them ---------------- */
 
-/* Homophones are deliberately absent. "to" and "for" are the two most common
-   words in a payment sentence, and reading them as 2 and 4 turns "twenty five
-   TO Ayesha" into 27 — a silent, plausible, wrong number. */
+/* Homophones are left out on purpose. "to" and "for" are the two commonest
+   words in a payment sentence, and reading them as 2 and 4 would turn
+   "twenty five to Ayesha" into 27 — a wrong number that looks plausible. */
 const UNITS = {
   zero: 0, one: 1, two: 2, three: 3, four: 4,
   five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11,
@@ -21,7 +18,7 @@ const UNITS = {
   seventeen: 17, eighteen: 18, nineteen: 19,
 };
 
-/* Carried along inside a number without being one: "a hundred and fifty". */
+/* Words carried inside a number without being one: "a hundred and fifty". */
 const FILLERS = new Set(['and', 'a', 'an']);
 
 const TENS = {
@@ -31,7 +28,7 @@ const TENS = {
 
 const isNumberWord = (t) => t in UNITS || t in TENS || t === 'hundred' || t === 'thousand';
 
-/** "twenty five" → 25, "one hundred and fifty" → 150. Null if it is not a number. */
+/** "twenty five" → 25, "one hundred and fifty" → 150. Null if not a number. */
 export function wordsToNumber(tokens) {
   let total = 0;
   let current = 0;
@@ -56,9 +53,8 @@ const clean = (text) =>
     .trim();
 
 /**
- * Pull an amount out of a sentence. Digits win when they are there —
- * recognisers write "20" when they are confident and "twenty" when they are
- * guessing, so a digit is the stronger signal.
+ * Pull an amount out of a sentence. Digits win when present: recognisers write
+ * "20" when confident and "twenty" when guessing.
  */
 export function extractAmount(text) {
   const t = clean(text);
@@ -92,9 +88,7 @@ export function extractAmount(text) {
   return best?.value ?? null;
 }
 
-/* ------------------------------------------------------------------ */
-/* Names, as recognisers hear them                                     */
-/* ------------------------------------------------------------------ */
+/* ------------------ names, as recognisers hear them --------------- */
 
 function editDistance(a, b) {
   const m = a.length;
@@ -123,10 +117,9 @@ export function similarity(a, b) {
 }
 
 /**
- * Find who was meant. "Ayesha" comes back as "Aisha", "Isha" or "Ayesh"
- * depending on the accent and the microphone, so an exact match is not enough
- * — but the threshold stays high, because paying the wrong person is worse
- * than being asked to repeat yourself.
+ * Find who was meant. "Ayesha" comes back as "Aisha" or "Ayesh" depending on
+ * the accent and the microphone, so an exact match is not enough — but the
+ * threshold stays high, because paying the wrong person is the worse failure.
  */
 export function matchRecipient(text, recipients = []) {
   const tokens = clean(text).split(' ').filter(Boolean);
@@ -147,9 +140,7 @@ export function matchRecipient(text, recipients = []) {
   return best && best.score >= 0.62 ? best : null;
 }
 
-/* ------------------------------------------------------------------ */
-/* Intent                                                              */
-/* ------------------------------------------------------------------ */
+/* ----------------------------- intent ---------------------------- */
 
 const has = (t, ...words) => words.some((w) => new RegExp(`\\b${w}\\b`).test(t));
 
@@ -161,10 +152,7 @@ const assetIn = (t) =>
   : has(t, 'sui', 'sweet', 'swee') ? 'SUI'
   : null;
 
-/**
- * What was asked for. Anything it cannot place comes back as `unknown` rather
- * than a guess — an assistant that acts on a maybe is worse than one that asks.
- */
+/** What was asked for. Anything it cannot place comes back as `unknown`. */
 export function parseCommand(text, { recipients = [] } = {}) {
   const t = clean(text);
   if (!t) return { kind: 'unknown' };
@@ -192,8 +180,8 @@ export function parseCommand(text, { recipients = [] } = {}) {
   if (has(t, 'send', 'pay', 'transfer', 'give')) {
     const amount = extractAmount(t);
 
-    // Look for the name after "to", where it usually is, before falling back
-    // to the whole sentence — "send Bilal twenty" has no "to" at all.
+    // Look for the name after "to" first, then in the whole sentence —
+    // "send Bilal twenty" has no "to" in it at all.
     const after = t.split(/\bto\b/).slice(1).join(' ');
     const match = matchRecipient(after, recipients) ?? matchRecipient(t, recipients);
 

@@ -3,9 +3,7 @@ import { token, fiat, suiNum, shortAddr } from '../lib/format.js';
 import { monthlySeries } from '../lib/ledger.js';
 import { Copy, Tick } from './Icons.jsx';
 
-/* ------------------------------------------------------------------ */
-/* The account, as a card                                              */
-/* ------------------------------------------------------------------ */
+/* --------------------- the account, as a card -------------------- */
 
 export function PaymentCard({ balanceSui, address, live, name }) {
   const [copied, setCopied] = useState(false);
@@ -22,46 +20,41 @@ export function PaymentCard({ balanceSui, address, live, name }) {
   }
 
   return (
-    <>
-      <section className="pcard" aria-label="Account">
-        <div className="pcard-top">
-          <span className="pcard-mark">MIZAN</span>
-          <span className={`tag${live ? ' on' : ''}`}>{live ? 'Live' : 'Demo'}</span>
-        </div>
+    <section className="pcard" aria-label="Account">
+      <div className="pcard-top">
+        <span className="pcard-mark">MIZAN</span>
+        <span className={`tag${live ? ' on' : ''}`}>{live ? 'Live' : 'Demo'}</span>
+      </div>
 
-        <span className="chip" aria-hidden="true" />
+      <span className="chip" aria-hidden="true" />
 
-        {/* Hero figure: proportional digits — tabular looks loose at this size. */}
-        <div className="pcard-amt">{token(balanceSui)}</div>
-        <div className="pcard-sub num">{fiat(balanceSui)}</div>
+      {/* Hero figure: proportional digits — tabular reads loose at this size. */}
+      <div className="pcard-amt">{token(balanceSui)}</div>
+      <div className="pcard-sub num">{fiat(balanceSui)}</div>
 
-        <div className="pcard-foot">
-          <span className="pcard-addr">
-            <span className="eyebrow">Your Sui address</span>
-            <span className="mono">
-              {address ? shortAddr(address, 10, 8) : <span className="sk sk-line" />}
-            </span>
+      <div className="pcard-foot">
+        <span className="pcard-addr">
+          <span className="eyebrow">Your Sui address</span>
+          <span className="mono">
+            {address ? shortAddr(address, 10, 8) : <span className="sk sk-line" />}
           </span>
-          <button className="pcard-copy" onClick={copy} disabled={!address}>
-            {copied ? <><Tick width={13} height={13} /> Copied</> : <><Copy width={13} height={13} /> Copy</>}
-          </button>
-        </div>
+        </span>
+        <button className="pcard-copy" onClick={copy} disabled={!address}>
+          {copied ? <><Tick width={13} height={13} /> Copied</> : <><Copy width={13} height={13} /> Copy</>}
+        </button>
+      </div>
 
-        <div className="pcard-name">
-          <span>{name}</span>
-          <span>Sui testnet</span>
-        </div>
-      </section>
-
-    </>
+      <div className="pcard-name">
+        <span>{name}</span>
+        <span>Sui testnet</span>
+      </div>
+    </section>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Six months, and the month you picked                                */
-/* ------------------------------------------------------------------ */
+/* ----------------- six months, and the one picked ---------------- */
 
-/** Round up to a clean axis top so the ticks read 0 / half / max. */
+/** Round up to a clean axis top, so the ticks read 0 / half / max. */
 function axisTop(max) {
   if (!(max > 0)) return 10;
   const mag = 10 ** Math.floor(Math.log10(max));
@@ -71,15 +64,14 @@ function axisTop(max) {
   return 10 * mag;
 }
 
-/* Axis ticks and bar caps: no decimals when there are none to show, and never
-   a rounded half — "63" for an axis top of 62.5 is a wrong number, not a
-   shorter one. */
+/* Axis ticks and bar caps: no decimals when there are none to show, and never a
+   rounded half — "63" for an axis top of 62.5 is wrong, not shorter. */
 const tick = (n) => suiNum(n, { dp: Number.isInteger(n) ? 0 : n >= 10 ? 1 : 2 });
 
 /**
- * The tiles and the chart are one component because they answer one question,
- * and they answer it about the same month: pick a bar and the tiles follow.
- * Every figure is summed from the transaction list — none is stored twice.
+ * The tiles and the chart are one component because they describe the same
+ * month: pick a bar and the tiles follow. Every figure is summed from the
+ * transaction list.
  */
 export function MonthlyPanel({ items }) {
   const series = useMemo(() => monthlySeries(items, 6), [items]);
@@ -144,12 +136,12 @@ export function MonthlyPanel({ items }) {
                   aria-pressed={n === i}
                   aria-label={`${d.label} ${d.year}: ${token(d.sent)} sent`}
                 >
-                  {/* The label rides the bar, so it must live inside it. */}
+                  {/* The label rides the top of the bar, so it lives inside it. */}
                   <span className="bar" style={{ height: `${(d.sent / top) * 100}%` }}>
                     {hover === n ? (
                       <span className="chart-tip num">{token(d.sent)}</span>
                     ) : n === i && (
-                      /* Label selectively — the month in focus, never every bar. */
+                      /* Only the month in focus is labelled, never every bar. */
                       <span className="chart-cap num">{tick(d.sent)}</span>
                     )}
                   </span>

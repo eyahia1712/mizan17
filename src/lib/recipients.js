@@ -1,13 +1,9 @@
 /**
- * Who you can send to.
+ * Saved recipients, shared by the account page and the wallet.
  *
- * Two ways to address a transfer, and the distinction is the whole point:
- *
- *   • a saved recipient — picked from a list, no address to type
- *   • a new one — the Sui address is required, because there is nothing else
- *     that can identify an account on chain
- *
- * Sending to a new address saves it, so it is only ever typed once.
+ * A transfer is addressed one of two ways: a saved recipient picked from the
+ * list, or a new Sui address typed in. A new address is saved once the
+ * transfer goes through, so it is only ever typed once.
  */
 
 import { contacts } from '../data/mockData.js';
@@ -37,7 +33,7 @@ function stored() {
   }
 }
 
-/** Saved additions first — they are the ones this person actually chose. */
+/** Saved additions first, then the seeded contacts. */
 export function loadRecipients() {
   const all = [...stored(), ...seeded()];
   const byAddress = new Map();
@@ -55,7 +51,7 @@ export function saveRecipient(recipient) {
       .filter((r) => r?.address?.toLowerCase() !== next.address.toLowerCase());
     localStorage.setItem(KEY, JSON.stringify([next, ...kept]));
   } catch {
-    /* non-fatal: it still works for this session */
+    // non-fatal: it still works for this session
   }
   return next;
 }
@@ -69,7 +65,7 @@ export function forgetRecipient(address) {
       )
     ));
   } catch {
-    /* non-fatal */
+    // non-fatal
   }
 }
 

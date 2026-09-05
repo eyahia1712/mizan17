@@ -1,19 +1,12 @@
 /**
- * Sui integration.
+ * All Sui chain access. There is no backend — the browser talks to the public
+ * testnet fullnode directly.
  *
- * Two things happen here, and it is worth being precise about which is which:
+ * Reads (balance, epoch, checkpoint) are always real. Transfers are real when
+ * the app is in Live mode: we build a Transaction, sign it with the account
+ * keypair and submit it, and the digest we get back opens on the explorer.
  *
- *   1. Chain reads  — always real. We query the public Sui testnet fullnode for
- *                     the current epoch, checkpoint and account balance.
- *   2. Transfers    — real when the app is in Live mode. We build a Sui
- *                     Transaction, sign it with a locally generated keypair and
- *                     submit it to testnet. The returned digest is a genuine
- *                     transaction you can open on the explorer.
- *
- * There is no backend. Sui is the backend. The browser talks to the fullnode
- * directly, which is the whole point of building this on-chain.
- *
- * Testnet coins have no monetary value. No real money moves anywhere.
+ * Testnet coins have no monetary value.
  */
 
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
@@ -25,25 +18,19 @@ export const MIST_PER_SUI = 1_000_000_000n;
 
 export const client = new SuiClient({ url: getFullnodeUrl(NETWORK) });
 
-/* ------------------------------------------------------------------ */
-/* Account                                                             */
-/* ------------------------------------------------------------------ */
+/* ---------------------------- account ---------------------------- */
 
 const KEY_STORAGE = 'mizan.demo.secretKey';
 
-/** Namespaces the derivation so a subject id alone is not the whole seed. */
+/** Salt so a Google subject id alone is not the whole seed. */
 const APP_SALT = 'mizan:sui:testnet:v1';
 
 /**
- * Derive the account keypair from a Google subject id.
+ * Derive the account keypair from a Google subject id: Ed25519 over
+ * SHA-256(salt : sub). Deterministic, so the same Google account gives the
+ * same Sui address on any machine and an account funded once stays usable.
  *
- * Deterministic on purpose: the same Google account produces the same Sui
- * address on any machine, so an account funded from the faucet once stays
- * usable. The seed is SHA-256 over the subject id and a fixed app salt.
- *
- * This stands in for zkLogin, which derives the address from the same
- * credential but proves it in zero knowledge and keeps no key in the browser.
- * Moving to zkLogin replaces this function and nothing else in the app.
+ * This stands in for zkLogin. Swapping zkLogin in replaces this function only.
  */
 export async function keypairForSubject(sub) {
   const bytes = new TextEncoder().encode(`${APP_SALT}:${sub}`);
@@ -52,32 +39,27 @@ export async function keypairForSubject(sub) {
   return Ed25519Keypair.deriveKeypairFromSeed(seed);
 }
 
-/**
- * A throwaway keypair for demo mode, reused within the browser session.
- * Used only when no Google client id is configured.
- */
+/** A throwaway keypair for the demo identity, kept for the browser session. */
 export function loadOrCreateKeypair() {
   try {
     const saved = sessionStorage.getItem(KEY_STORAGE);
     if (saved) return Ed25519Keypair.fromSecretKey(saved);
   } catch {
-    /* sessionStorage unavailable — fall through and mint a fresh key */
+    // sessionStorage unavailable — mint a fresh key instead
   }
 
   const kp = new Ed25519Keypair();
   try {
     sessionStorage.setItem(KEY_STORAGE, kp.getSecretKey());
   } catch {
-    /* non-fatal */
+    // non-fatal
   }
   return kp;
 }
 
-/* ------------------------------------------------------------------ */
-/* Reads                                                               */
-/* ------------------------------------------------------------------ */
+/* ----------------------------- reads ----------------------------- */
 
-/** The account's real, on-chain balance in SUI. */
+/** The account's real on-chain balance, in SUI. */
 export async function getBalanceSui(address) {
   if (!address) return 0;
   const { totalBalance } = await client.getBalance({ owner: address });
@@ -101,13 +83,11 @@ export async function getChainSnapshot(address) {
   };
 }
 
-/* ------------------------------------------------------------------ */
-/* Faucet                                                              */
-/* ------------------------------------------------------------------ */
+/* ----------------------------- faucet ---------------------------- */
 
 /**
- * Ask the testnet faucet for coins. The faucet is rate limited and sometimes
- * blocks browser origins, so callers must handle rejection gracefully.
+ * Ask the testnet faucet for coins. It is rate limited and sometimes blocks
+ * browser origins, so callers must handle a rejection.
  */
 export async function fundFromFaucet(address) {
   const faucet = await import('@mysten/sui/faucet');
@@ -124,13 +104,11 @@ export async function fundFromFaucet(address) {
   });
 }
 
-/* ------------------------------------------------------------------ */
-/* Transfer                                                            */
-/* ------------------------------------------------------------------ */
+/* ---------------------------- transfer --------------------------- */
 
 /**
- * Send SUI on testnet and wait for the transaction to be indexed.
- * Returns the digest — a real, verifiable transaction id.
+ * Send SUI on testnet and wait for it to be indexed. Returns the digest —
+ * a real, verifiable transaction id.
  */
 export async function sendSui({ keypair, recipient, amountSui }) {
   const mist = BigInt(Math.round(Number(amountSui) * Number(MIST_PER_SUI)));
@@ -159,11 +137,7 @@ export async function sendSui({ keypair, recipient, amountSui }) {
   }
 }
 
-/**
- * Turn the SDK's failures into something a person can act on. "Failed to
- * fetch" tells someone nothing about what to do next; "your testnet account is
- * empty, here is the faucet" tells them everything.
- */
+/** Turn an SDK error into a message that says what to do about it. */
 function explainSendFailure(error, sender) {
   const text = String(error?.message ?? error);
 

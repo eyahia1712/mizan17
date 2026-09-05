@@ -1,13 +1,12 @@
 /**
- * The currency the app counts in.
+ * The currency the app displays money in.
  *
- * Balances are held in SUI and USDT; this is only the money people think in
- * while they look at them. Ringgit is the default because that is where the
- * account lives, but a remittance app is used by someone whose family thinks
- * in taka or rupees, so the figure has to be able to change.
+ * Balances are held in SUI and USDT — this is only what people read them as.
+ * Ringgit is the default because that is where the account lives, but the
+ * person receiving the money often thinks in taka or rupees, so it can change.
  *
  * Rates are demo figures pinned to the same dollar the stablecoin uses, so
- * every conversion in the product agrees with every other one.
+ * every conversion in the app agrees with every other one.
  */
 
 export const CURRENCIES = {
@@ -30,10 +29,10 @@ export const DEFAULT_CURRENCY = 'MYR';
 const STORAGE_KEY = 'mizan.currency';
 
 /**
- * The active code is module state rather than a prop threaded through forty
- * components. Every formatter reads it; App owns the matching React state and
- * is the only thing that sets it, so a change re-renders the tree that reads
- * it. Set it anywhere else and the screen will not know to update.
+ * The active code is module state instead of a prop threaded through every
+ * component. The formatters read it; App owns the matching React state and is
+ * the only thing that calls setCurrency, so a change re-renders the screens
+ * that read it. Set it anywhere else and the UI will not update.
  */
 let active = DEFAULT_CURRENCY;
 
@@ -41,7 +40,7 @@ try {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved && CURRENCIES[saved]) active = saved;
 } catch {
-  /* storage unavailable — the default stands */
+  // storage unavailable — keep the default
 }
 
 export const getCurrency = () => active;
@@ -53,13 +52,13 @@ export function setCurrency(code) {
   try {
     localStorage.setItem(STORAGE_KEY, code);
   } catch {
-    /* non-fatal: it holds for this session */
+    // non-fatal: the choice holds for this session
   }
   return active;
 }
 
-/** Ringgit in, the active currency out. */
+/** Ringgit in, active currency out. */
 export const fromMyr = (n, code = active) => (Number(n) || 0) * (CURRENCIES[code]?.perMyr ?? 1);
 
-/** The active currency in, ringgit out — for anything priced in ringgit. */
+/** Active currency in, ringgit out. */
 export const toMyr = (n, code = active) => (Number(n) || 0) / (CURRENCIES[code]?.perMyr ?? 1);

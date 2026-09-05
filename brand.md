@@ -66,8 +66,8 @@ either, and neither defines anything the app can see.
 - **The account chooser** (`.gsi-`, `styles/chooser.css`) is Google's layout, type and
   greys. At the moment someone is asked to trust a screen, a familiar one beats an
   original one.
-- **The wallet** (`.tw-`, `styles/wallet.css`) is dark, round-cornered and filled,
-  because that is what a wallet looks like and because it has to read as a separate
-  thing you opened rather than another Mizan panel. It is the one place shadows-free
-  dark fills and a blue accent are allowed, and the blue does exactly one job there —
-  the action you can take.
+- **The wallet** (`.tw-`, `styles/wallet.css`) borrows a wallet's *shape* — a
+  balance, round action buttons, a bottom nav — but keeps this palette, so it reads
+  as part of the same product rather than a second design. The only colours it adds
+  are third-party brand marks (Sui, Tether, Trust Wallet, CIMB, Touch 'n Go), for
+  the same reason the Google logo keeps its four.

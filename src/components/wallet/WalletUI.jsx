@@ -1,17 +1,15 @@
 /**
- * Shared parts of the wallet.
+ * The wallet's own icons, marks and screen primitives.
  *
- * The wallet is a self-contained surface: its own icon set, its own dark
- * palette, its own idea of a screen. None of it inherits from the Mizan
- * design system and none of it leaks back — every class is under .tw.
+ * The wallet is a self-contained surface with its own icon set and palette.
+ * Nothing here inherits from the Mizan design system and nothing leaks back —
+ * every class is namespaced under .tw.
  */
 
 import { useState } from 'react';
 import { CURRENCIES, CURRENCY_CODES } from '../../lib/currency.js';
 
-/* ------------------------------------------------------------------ */
-/* Icons — filled, 24-grid, heavier than the Mizan set on purpose      */
-/* ------------------------------------------------------------------ */
+/* ------ icons: 24px grid, heavier than the Mizan set on purpose ---- */
 
 const svg = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true };
 
@@ -29,27 +27,17 @@ export const IcClose   = (p) => <svg {...svg} {...p}><path d="M18 6 6 18M6 6l12 
 export const IcHome    = (p) => <svg {...svg} {...p}><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z" /></svg>;
 export const IcClock   = (p) => <svg {...svg} {...p}><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 1.8" /></svg>;
 export const IcCard    = (p) => <svg {...svg} {...p}><rect x="2.5" y="5" width="19" height="14" rx="2.5" /><path d="M2.5 10h19" /></svg>;
-export const IcBank    = (p) => <svg {...svg} {...p}><path d="M3 9.5 12 4l9 5.5M5.5 10v8M18.5 10v8M12 10v8M3 20h18" /></svg>;
-export const IcStack   = (p) => <svg {...svg} {...p}><path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 13 9 5 9-5" /></svg>;
-export const IcGear    = (p) => <svg {...svg} {...p}><circle cx="12" cy="12" r="3.2" /><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-2.8-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 15H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.1-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 9 4.6V4a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5.9Z" /></svg>;
 export const IcQr      = (p) => <svg {...svg} {...p}><rect x="3.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="13.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="3.5" y="13.5" width="7" height="7" rx="1.5" /><path d="M13.5 13.5h3v3m4 0v4h-4v-3" /></svg>;
 export const IcShield  = (p) => <svg {...svg} {...p}><path d="M12 3.5 5 6.2v5.4c0 4.2 2.9 7.6 7 8.9 4.1-1.3 7-4.7 7-8.9V6.2z" /><path d="m9 12 2.2 2.2L15.5 10" /></svg>;
 export const IcGlobe   = (p) => <svg {...svg} {...p}><circle cx="12" cy="12" r="8.5" /><path d="M3.5 12h17M12 3.5c2.2 2.4 3.4 5.4 3.4 8.5S14.2 18.1 12 20.5c-2.2-2.4-3.4-5.4-3.4-8.5S9.8 5.9 12 3.5Z" /></svg>;
 export const IcEye     = (p) => <svg {...svg} {...p}><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="3" /></svg>;
 
-/* ------------------------------------------------------------------ */
-/* Marks                                                               */
-/*                                                                     */
-/* Third-party marks keep their own colours — a payment brand is        */
-/* recognised by its colour, and the same exception the Google chooser  */
-/* takes applies here.                                                  */
-/* ------------------------------------------------------------------ */
+/* ----------------------------- marks ----------------------------- */
 
-/**
- * Trust Wallet's shield. Drawn rather than fetched, so it survives an offline
- * demo, and kept in the brand's own blue for the same reason the Google logo
- * in the chooser keeps its four colours: a mark is recognised by its colour.
- */
+/* Third-party marks keep their own colours, because a brand is recognised by
+   its colour. All of them are drawn inline rather than fetched. */
+
+/** Trust Wallet's shield. */
 export const TrustMark = ({ size = 22 }) => (
   <svg viewBox="0 0 32 32" width={size} height={size} aria-hidden="true">
     <path
@@ -119,9 +107,7 @@ export const SuiMark = ({ size = 40 }) => (
   </span>
 );
 
-/* ------------------------------------------------------------------ */
-/* Screen shell                                                        */
-/* ------------------------------------------------------------------ */
+/* -------------------------- screen shell ------------------------- */
 
 export function Screen({ title, onBack, right, children, foot }) {
   return (
@@ -140,9 +126,7 @@ export function Screen({ title, onBack, right, children, foot }) {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Pieces                                                              */
-/* ------------------------------------------------------------------ */
+/* ---------------------------- pieces ----------------------------- */
 
 export const Detail = ({ label, value, strong }) => (
   <div className={`tw-detail${strong ? ' strong' : ''}`}>
@@ -177,7 +161,7 @@ export function CopyField({ label, value, lines = false }) {
   );
 }
 
-/** The big number every entry screen is built around. */
+/** The big amount input every entry screen is built around. */
 export function AmountField({ value, onChange, unit = 'SUI', sub, max, onMax, error, autoFocus }) {
   return (
     <div className="tw-amount-wrap">
@@ -215,7 +199,7 @@ export function MethodRow({ mark, title, sub, on, onClick, right }) {
   );
 }
 
-/** The end of every flow. One shape, so success always reads the same. */
+/** The end of every flow, so success always reads the same. */
 export function Success({ title, amount, sub, details, onDone, doneLabel = 'Done' }) {
   return (
     <div className="tw-success">
@@ -236,12 +220,9 @@ export function Success({ title, amount, sub, details, onDone, doneLabel = 'Done
 }
 
 /**
- * A deterministic price line. Same address, same shape — a chart that
- * reshuffled on every render would read as decoration, not data.
- *
- * Drawn in ink, not in green or red: the direction is already stated by the
- * signed figure above it, and a second hue saying the same thing would be a
- * colour doing no job.
+ * A price line generated from a seed, so the same asset always draws the same
+ * shape. Drawn in ink rather than green or red — the signed figure above it
+ * already says which way the price moved.
  */
 export function Sparkline({ seed = 'sui', points = 40, up = true }) {
   let x = 0;
@@ -268,7 +249,7 @@ export function Sparkline({ seed = 'sui', points = 40, up = true }) {
   );
 }
 
-/** Stands in for a scannable code without pulling in a QR dependency. */
+/** Stands in for a scannable code without pulling in a QR library. */
 export function QrBlock({ value = '', size = 21, px = 196 }) {
   let seed = 0;
   for (let i = 0; i < value.length; i++) seed = (seed * 31 + value.charCodeAt(i)) >>> 0;
@@ -307,9 +288,8 @@ export const AssetMark = ({ asset, size = 40 }) =>
   asset === 'USDT' ? <UsdtMark size={size} /> : <SuiMark size={size} />;
 
 /**
- * Which money the wallet is counted in. A native select, because it is a list
- * of eleven things on a touch screen and the platform's own picker beats
- * anything reimplemented here.
+ * Which currency the wallet is counted in. A native select, because eleven
+ * options on a touch screen are better handled by the platform's own picker.
  */
 export function CurrencyPicker({ value, onChange, id }) {
   return (

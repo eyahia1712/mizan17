@@ -2,19 +2,13 @@ import { SUI_TO_MYR, ASSETS } from '../data/mockData.js';
 import { currency, fromMyr } from './currency.js';
 
 /**
- * Amounts are SUI. Small amounts — a network fee — need more places than a
- * balance does, so the precision follows the magnitude rather than being
- * fixed at two and printing "0.00" for a real fee.
+ * Format an amount of SUI.
  *
- * Rounding never goes to nearest, because "nearest" is wrong in both
- * directions here:
+ * Precision follows magnitude, so a 0.005 network fee does not print as "0.00".
  *
- *   • a balance rounds DOWN — 466.495 shown as "466.50" reads as more money
- *     than you have
- *   • a cost rounds UP — a total of 25.005 shown as "25.00" reads as though
- *     the network fee were free
- *
- * So anything showing a charge passes `up`, and everything else gets the floor.
+ * Rounding is never to nearest: a balance rounds down (466.495 shown as 466.50
+ * claims money you do not have) and a charge rounds up (25.005 shown as 25.00
+ * makes the fee look free). Anything showing a cost passes `up`.
  */
 export function sui(n, opts = {}) {
   const v = Number(n) || 0;
@@ -34,17 +28,13 @@ export function sui(n, opts = {}) {
 /** Just the digits, for places that set the unit in their own markup. */
 export const suiNum = (n, opts = {}) => sui(n, { ...opts, bare: true });
 
-/**
- * What a holding is worth, in whichever currency is selected. The asset says
- * which rate to price it at; SUI is the default.
- */
+/** What a holding is worth in the selected currency. */
 export const fiat = (n, asset = 'SUI') =>
   cash(Number(n) * (ASSETS[asset]?.myr ?? SUI_TO_MYR));
 
 /**
- * A figure that is already money — a provider fee, a payout, a card charge.
- * Everything priced in the product is priced in ringgit underneath, and this
- * is where it becomes whatever the person chose to read it in.
+ * A figure that is already money — a fee, a payout, a card charge. Everything
+ * is priced in ringgit underneath; this converts it to the chosen currency.
  */
 export function cash(myrAmount) {
   const c = currency();
@@ -55,16 +45,13 @@ export function cash(myrAmount) {
   return `${c.symbol} ${body}`;
 }
 
-/**
- * An amount in whichever asset holds it. Same rounding rules as `sui` —
- * pass `{ up: true }` for anything that is a charge.
- */
+/** An amount in whichever asset holds it. Same rounding rules as `sui`. */
 export function token(n, asset = 'SUI', opts = {}) {
   const body = sui(n, { ...opts, bare: true });
   return opts.bare ? body : `${body} ${ASSETS[asset]?.symbol ?? asset}`;
 }
 
-/** Ringgit, back to SUI — the on-ramp works in the other direction. */
+/** Ringgit back to SUI, for the on-ramp. */
 export const myrToSui = (rm) => (Number(rm) || 0) / SUI_TO_MYR;
 
 export const pct = (n) =>

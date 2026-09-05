@@ -1,11 +1,10 @@
 /* ============================================================
    ACCOUNT CHOOSER
 
-   The one screen in this product that is deliberately not Mizan.
-   It is Google's layout, Google's type and Google's greys, because
-   this is the moment the person is asked to trust a screen they
-   already know. Nothing here inherits from the design system, and
-   nothing here leaks back into it — every rule is under .gsi-.
+   The one screen that is deliberately not Mizan: Google's layout,
+   type and greys, because this is the moment someone is asked to
+   trust a screen they already know. Nothing here inherits from the
+   design system and nothing leaks back — every rule is under .gsi-.
    ============================================================ */
 
 .gsi-scrim {

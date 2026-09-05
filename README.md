@@ -2,302 +2,188 @@
 
 **ميزان — the balance, the scales.**
 
-Money that follows you. Borderless payments for people who moved — built on Sui.
+Money that follows you. A payment account for people who moved — built on Sui.
 
-Submitted to **MUBA Blockchain Hackathon 2026** · Sui Foundation Track 1: Payments & Stablecoins
+**Team Red Sea** · MUBA Blockchain Hackathon 2026 · Sui Foundation Track: Payments & Stablecoins
+
+| | |
+| --- | --- |
+| **Live demo** | `npm install && npm run dev` → http://localhost:5173 |
+| **Demo video** | _(add link before submitting)_ |
+| **Network** | Sui testnet |
+| **Status** | Working prototype. No real money moves anywhere. |
 
 ---
 
 ## The problem
 
-An international student lands in Kuala Lumpur in August. Their tuition is paid, their
-hostel deposit is due, and their mother is trying to send them living expenses from
-Dhaka. They cannot open a Malaysian bank account yet — that takes weeks and paperwork
-that depends on documents still being processed.
+**Sending money across a border is easy. Turning it back into money you can spend is not.**
 
-So the money arrives the expensive way. A bank wire costs around USD 45 and takes two to
-five days. A money changer takes a cut on the rate as well as a fee. Meanwhile rent is
-split four ways among housemates over WhatsApp, chased for a fortnight, and settled in
-cash.
+An international student arrives in Kuala Lumpur. Their mother wants to send living
+expenses from Dhaka. Today that means one of three bad options:
 
-The same problem is much larger for Malaysia's migrant workforce, who send money home
-every month through the highest-friction corridors in the region.
+- **A bank wire** — around USD 45 in fees, two to five days, and the student needs a
+  Malaysian bank account they cannot open yet.
+- **A money changer** — a cut on the rate *and* a fee, paid in cash, with no record.
+- **Crypto** — fast and cheap to send, but then the money is stuck. It is a token in a
+  wallet, not ringgit in a hand. Getting it out means a seed phrase, an exchange, KYC,
+  and steps nobody outside crypto knows how to take.
 
-**The reason this is hard is not technology. It is permission.** A bank account has to be
-granted by an institution that is allowed to refuse. Someone new to the country, with
-incomplete documents, is exactly the person that process is designed to exclude.
+The same problem is far bigger for Malaysia's migrant workforce, who send money home
+every month through some of the highest-cost corridors in the region.
+
+**Two things are actually broken:**
+
+1. **Getting an account.** A bank account has to be *granted* by an institution that is
+   allowed to refuse. Someone new to the country, with documents still processing, is
+   exactly who that process excludes.
+2. **Getting the money out.** Crypto solved the transfer and ignored the last mile. The
+   money has to land as **taka, rupees, peso or ringgit** — in a bank account or an
+   e-wallet the family already uses.
+
+Mizan is built around the second one, because that is the half everybody skips.
 
 ## What Mizan does
 
-Mizan gives that person somewhere to receive and send money on day one.
+**Sign in with Google. Get a Sui account. Send money. Cash it out in real currency.**
 
-- **Sign in with Google.** The account is derived from the Google credential itself.
-  No seed phrase, no documents, no branch visit, no approval step. What that derivation
-  is *today* is set out under **Sign-in and key derivation** below.
-- **Send to a person, not an address.** Recipients are chosen by name and handle.
-- **Settles in about two seconds** for a network fee of roughly two cents, with no
-  correspondent bank in the path.
-- **Split rent and bills** with housemates and settle instantly.
-- **Cash out** to ringgit or a local currency through a licensed exchange partner.
+- **No seed phrase, no documents, no approval.** The Sui address is derived from the
+  Google account itself. Sign in on any device and you get the same address back.
+- **Send in about two seconds** for a network fee of roughly two cents.
+- **Read your money in your own currency.** Eleven are supported — MYR, USD, SGD, BDT,
+  NPR, INR, IDR, PHP, EUR, GBP, AED. Pick one and every figure in the app changes.
+- **Cash out to real money**, through the same two steps a real off-ramp uses: swap SUI
+  for a stablecoin, then sell the stablecoin into a bank account or e-wallet. Both fees
+  are shown, because both are really charged.
+- **Buy crypto** by comparing what three licensed on-ramps would deliver for the same
+  ringgit — they differ on fee *and* spread.
+- **Split rent and bills** with housemates, with the occasion attached so the request
+  still makes sense a week later.
+- **Pay by voice.** Say *"Hey Trisha, send twenty five to Ayesha"*, she reads the
+  transaction back, and it only sends once you say yes out loud.
 
-The account cannot be refused, because it is not granted by anyone. It is derived
-mathematically and settled on a public network.
+The account cannot be refused, because nobody grants it. It is derived from a key and
+settled on a public network.
 
 ## Why this needs a blockchain
 
-This is the question the product has to answer, so it is worth being direct.
+A normal fintech app still sits on a bank account somewhere — and that account carries
+the same permission requirement that excluded the user in the first place.
 
-A conventional fintech app still sits on top of a bank account somewhere, and that
-account carries the same permission requirement that excluded the user in the first
-place. Moving the ledger on-chain removes the gatekeeper entirely: the account exists as
-soon as the key is derived, and value moves between two addresses without an
-intermediary institution deciding whether the transfer is allowed.
+Moving the ledger on-chain removes the gatekeeper. The account exists the moment the key
+is derived, and value moves between two addresses with no institution deciding whether
+it is allowed.
 
-Sui is a good fit specifically because two of its features address the parts of crypto
-that normally break mainstream users:
+**Why Sui specifically:**
 
 | Sui feature | What it solves here |
 | --- | --- |
-| **zkLogin** | Account from a Google sign-in, with no seed phrase to lose — the single biggest onboarding failure for non-crypto users. Designed for; see the section below for what this build actually does. |
-| **Sponsored transactions** | The user needs no gas token to transact. They never learn what gas is. |
-| **Programmable Transaction Blocks** | A split-and-settle across several housemates batches into one atomic transaction. |
-| **Sub-second finality, fees under a cent** | Makes small transfers — a share of the groceries — economically sensible. |
+| **zkLogin** | An account from a Google sign-in, with no seed phrase to lose. This is the single biggest reason non-crypto users bounce. |
+| **Sub-second finality, sub-cent fees** | Makes small transfers — a share of the groceries — worth doing at all. |
+| **Sponsored transactions** | The user never needs a gas token, and never learns what gas is. |
+| **Programmable Transaction Blocks** | A split across four housemates settles as one atomic transaction. |
+
+## The business case
+
+**The market.** Malaysia sent out roughly **USD 8 billion** in remittances in 2023, with
+about 2.7 million migrant workers and over 130,000 international students. The
+Bangladesh, Nepal, Indonesia and Philippines corridors out of Malaysia carry some of the
+highest fees in Southeast Asia — commonly 5–7% all-in once the exchange-rate spread is
+counted.
+
+**Where the money is made.** Not on the transfer — that part is nearly free and should
+stay that way. Revenue comes from the edges, which is where incumbents already charge:
+
+- **Off-ramp margin** — a spread on converting the stablecoin to local currency. Even at
+  a fraction of what a bank charges, this is the main line.
+- **On-ramp referral** — a share of the provider fee when a user buys through MoonPay,
+  Transak or Banxa.
+- **Business accounts** — landlords, hostels and universities collecting recurring
+  payments from students who all already hold the app.
+
+**Why we win against the incumbents:**
+
+| | Bank wire | Money changer | Wise / Remitly | **Mizan** |
+| --- | --- | --- | --- | --- |
+| Fee | ~USD 45 | 3–7% | 1–3% | **Under 1%** |
+| Speed | 2–5 days | Same day | Hours to days | **~2 seconds** |
+| Account needed | Yes | No | Yes | **No** |
+| Works for a new arrival | No | Yes | No | **Yes** |
+
+**Go to market.** Universities first. International students arrive in cohorts, share
+housing, split bills, and already tell each other how they are moving money. One campus
+is a network, not a hundred separate customers.
+
+## Our vision
+
+**Everyone should be able to hold and move money without asking permission first.**
+
+The account is step one. Where it goes:
+
+1. **Payroll for migrant workers** — paid on-chain, cashed out at home, no employer
+   holding a passport as collateral.
+2. **Group accounts** — shared custody for households, hostels and student societies.
+3. **Escrow** — deposits and milestone payments held by a Move contract, not by a
+   landlord's goodwill.
+4. **More corridors** — the same product works anywhere an off-ramp partner exists.
 
 ## Blockchain technology used
 
 - **Network:** Sui **testnet**
-- **SDK:** `@mysten/sui` v1.x (`SuiClient`, `Ed25519Keypair`, `Transaction`)
+- **SDK:** `@mysten/sui` v1.x — `SuiClient`, `Ed25519Keypair`, `Transaction`
 - **Transaction type:** native SUI transfer via `splitCoins` + `transferObjects`
 - **Explorer:** Suiscan testnet
+- **Backend:** none. The browser talks to the Sui fullnode directly.
 
 ### Smart contract addresses
 
-**None — and this is deliberate.** Transfers in this prototype use Sui's *native* coin
-transfer, which is a built-in operation of the chain rather than a deployed Move module.
-There is no custom contract to publish, so there is no package address to report.
+**None — and that is deliberate.** Transfers here use Sui's *native* coin transfer, which
+is a built-in operation of the chain, not a deployed Move module. There is no custom
+contract, so there is no package address to report.
 
 What can be verified instead:
 
-- **Account address:** generated per browser session, shown in full under the Account
-  tab. Open it on Suiscan from the link there.
-- **Transaction digests:** every transfer made in Live mode returns a real testnet
-  digest, linked to Suiscan from the receipt screen.
+- **Account address** — derived from your Google sign-in, shown in full under **Account**
+  and on the wallet's settings screen, with a link to Suiscan.
+- **Transaction digests** — every transfer made in Live mode returns a real testnet
+  digest, linked to Suiscan from the receipt.
 
-A Move module becomes necessary at the point where the product adds escrow, scheduled
-transfers or shared-custody group accounts. Those are on the roadmap below, not in this
-build.
-
-## Sign-in and key derivation
-
-Being precise about this matters more than the pitch sounding better.
-
-**What is real.** Sign-in is a genuine Google OAuth 2.0 flow. Clicking *Continue with
-Google* opens Google's own account chooser in a popup while the provisioning sequence
-plays in the main window; the popup lands back on this origin, hands the ID token to its
-opener and closes. The name shown throughout the app is that account's.
-
-**How the wallet is derived.** The Sui keypair is derived deterministically from the
-Google subject id: `Ed25519(SHA-256(app_salt : sub))`. The consequence that matters is
-that the same Google account always yields the same Sui address, on any machine — so an
-account funded once from the faucet stays usable.
-
-**When no client id is configured.** A web page cannot enumerate the Google accounts
-signed in on the device — only Google can, and only through a registered OAuth client.
-So without `VITE_GOOGLE_CLIENT_ID` the app shows its own chooser instead: the same
-layout, over a list of accounts seeded in `lib/auth.js` and extended through *Use
-another account*, which remembers what it is given in `localStorage`. Whichever chooser
-answers, the app receives the same three things — name, email and a stable subject id —
-and the address is derived from that id the same way. Set the client id and the real
-chooser takes over with no other change.
-
-**What this is not.** It is not zkLogin. zkLogin derives the address from the same
-credential but proves the link in zero knowledge and leaves no private key in the
-browser; this build holds the key client-side and derives the address with a hash. Two
-further gaps follow from having no backend: the ID token's signature is not verified
-(that needs Google's JWKS on a server), and the salt is a fixed constant rather than
-coming from a salt service.
-
-Swapping in real zkLogin replaces one function — `keypairForSubject` in `lib/sui.js` —
-plus a proving service and a salt service. Nothing else in the app changes.
-
-## Trisha
-
-An assistant that does transactions by voice. Nothing is on screen until she is
-called by name.
-
-A pink pill sits in the bottom-right corner the whole time, reading **Say “Hey Trisha”**.
-It is not a button — it is the only sign the feature exists, for the person who has no
-way of knowing they can talk to the page.
-
-Say **“Hey Trisha”** — a chime plays, a small panel opens at the top right with an orb
-that moves with your voice, and she answers: **“Aha, I'm listening.”** That is the whole
-greeting. She does not recite what she can do; the example sits on screen where it can
-be read and ignored. Say what you want, she fills the transaction in and reads it back,
-and **only moves money once you say yes out loud.**
-
-    “Hey Trisha, send twenty five to Ayesha”
-    → Send 25 SUI to Ayesha. Shall I?      [to · amount · network fee · total]
-    “yes”
-    → Sent 25 SUI to Ayesha.
-
-She also handles the sentence in two halves — *“send money to Nurul”* → **“How much?”**
-→ *“forty”* — and asks again when a name does not match anyone saved.
-
-**What she does:** sends, reads your balance, and opens buying, swapping or cashing out
-in the wallet with the amount already filled. Those last three pick a provider or a
-payout rail, and that is a choice to make by eye, so she opens the screen rather than
-deciding it.
-
-**Why she confirms.** "Eighty" and "eighteen" are one mishearing apart, and that
-difference is somebody's rent. The figure is shown and spoken before it is spent. She
-also refuses anything over the balance before offering it at all.
-
-**How it works, and its limits.** No backend and no model: `lib/voice.js` wraps the
-browser's own `SpeechRecognition`, `speechSynthesis` and a two-oscillator chime, and
-`lib/commands.js` parses the sentence with a grammar rather than an LLM — instant,
-offline, and unable to invent a recipient. Chrome or Edge; Safari is restrictive about
-continuous listening and Firefox does not support it. It needs the microphone once. And
-worth knowing: in Chrome, `SpeechRecognition` sends audio to Google to transcribe, which
-is the browser's implementation rather than a choice this code makes.
-
-Without a microphone — or to test her — the same path takes a typed sentence:
-
-```js
-window.dispatchEvent(new CustomEvent('trisha:hear', { detail: 'send 20 to ayesha' }))
-```
-
-## Splitting a bill
-
-Splitting is a claim on somebody, and a claim needs a reason — "Nurul owes you 15 SUI"
-means nothing a week later. So the sheet asks three things before it will let you send
-one:
-
-- **What it is for** — free text, with presets for room rent, Wi-Fi, utilities,
-  groceries, dinner and transport.
-- **The total.**
-- **Between how many people**, you included, on a stepper. You can name fewer people
-  than the headcount: split six ways, ask three, and the share is still the total over
-  six.
-
-The occasion becomes the title of the entry, and the request stays **out of the balance
-and out of the month's totals** until it is actually paid — a request is not money that
-has arrived.
-
-## Sending
-
-A transfer needs two things: an address and an amount. The address is not optional —
-it is the only thing that identifies an account on Sui — so the send screen asks for it
-in one of two ways:
-
-- **Saved.** Pick a recipient from the list. Nothing to type.
-- **New address.** Paste the recipient's public wallet address. It is validated as you
-  type, and **saved once the transfer goes through**, so any address is typed exactly
-  once and appears under *Saved* from then on.
-
-Saved recipients live in `lib/recipients.js`, shared by the account page and the wallet,
-and persist in `localStorage`.
-
-## The wallet
-
-The *Wallet* button in the header opens a full wallet: total worth, Send / Receive /
-Buy / Swap / Sell, a token page per asset with a price line, history grouped by month,
-and settings holding the address and the live-transfer switch. It is built on the same
-paper, ink and hairlines as the rest of the product — a wallet's shape, not a wallet's
-palette.
-
-It holds two assets, and the second one is not decoration: **SUI** is what the account
-spends, and **USDT** is the step between a volatile coin and a bank account.
-
-### The currency it counts in
-
-Balances are held in SUI and USDT; the currency beside the total is only what people
-*think* in while they look at them. Ringgit is the default because that is where the
-account lives, but a remittance app is used by someone whose family thinks in taka or
-rupees, so eleven are available — MYR, USD, SGD, BDT, NPR, INR, IDR, PHP, EUR, GBP, AED.
-
-Picking one changes every money figure in the product, not just the wallet's: the card,
-the tiles, the activity rows, the quotes. The choice is remembered. Rates live in
-`lib/currency.js`, pinned to the same dollar the stablecoin uses so every conversion
-agrees with every other one.
-
-### Buying, the way an on-ramp works
-
-A wallet does not sell you the coin. It shops the order to licensed providers and shows
-what each would deliver for the same ringgit, which is why the flow has four steps
-instead of one:
-
-1. **Amount**, in ringgit — you decide what to spend, the provider's rate settles the rest.
-2. **Provider** — MoonPay, Transak and Banxa quote the same order. They differ on fee
-   *and* on spread, so the cheapest fee is not always the most SUI. The best is badged.
-3. **Payment** — card, Touch 'n Go eWallet, or CIMB by FPX.
-4. **Review**, then the three things a real order waits on: identity check, payment
-   authorisation, delivery to your address.
-
-### Selling, the way an off-ramp works
-
-There is no route from SUI straight to a bank account, and the *Sell* screen opens by
-saying so. It takes two steps and charges for both:
-
-1. **Swap SUI for USDT** on chain, through a pool (`Cetus · SUI/USDT`) — with a rate,
-   a 0.3% pool fee, price impact that grows with order size, slippage tolerance and a
-   minimum received.
-2. **Cash out the USDT to ringgit**, paid into **Touch 'n Go eWallet** (minutes) or
-   **CIMB Bank** (1–2 business days), at 0.9% + RM 2.
-
-Both halves land in the history as separate entries, because both really happened. If
-you already hold USDT you can skip step one.
-
-The arithmetic for all of this lives in `lib/market.js`, so a quote on a review screen
-is the same number the transaction is built from.
-
-It is not a second set of numbers. The wallet and the Mizan screens read the same
-balance and the same transaction list, and every entry — a transfer, a card purchase, a
-withdrawal to a bank — is written through one function in `App.jsx`. Buy from a card in
-the wallet and the dashboard's balance, month chart and fee total have already moved by
-the time you close it.
-
-The spending rules are real arithmetic, not decoration: nothing can be sent that the
-balance plus its network fee will not cover, *Max* offers exactly that figure, and the
-message on a rejected amount says which limit was hit.
+A Move module becomes necessary when we add escrow, scheduled transfers and
+shared-custody group accounts. Those are on the roadmap, not in this build.
 
 ## Demo mode and Live mode
 
-The app ships with two modes, switchable from the Account tab. Being explicit about
-which is which matters more than making the demo look impressive.
+Switchable from the **Account** sheet or the wallet's settings.
 
 | | Demo mode (default) | Live mode |
 | --- | --- | --- |
-| Balances, contacts, history | Fabricated fixture data | Fabricated fixture data |
-| Exchange rate | Fixed at 14.86 MYR/SUI | Fixed at 14.86 MYR/SUI |
-| Send button | Simulated, receipt generated locally | **Real transaction signed and submitted to Sui testnet** |
-| Spending limit | The demo balance | **The account's real on-chain balance, polled from the fullnode** |
+| Balances, contacts, history | Fixture data | Fixture data |
+| Send | Simulated, receipt generated locally | **Real transaction signed and submitted to Sui testnet** |
+| Spending limit | The demo balance | **The account's real on-chain balance** |
 | Digest on receipt | Locally generated, labelled as such | **Real digest, verifiable on Suiscan** |
-| Wallet buy and sell | Simulated on-ramp and off-ramp; no card is charged | Simulated on-ramp and off-ramp; no card is charged |
+| Buy and cash out | Simulated — no card charged, no bank transfer placed | Same |
 
-Testnet coins have no monetary value. No real money moves anywhere in this project.
+Testnet coins have no monetary value. **No real money moves anywhere in this project.**
 
-**To use Live mode:** open the Account tab, turn on *Live transfers*, copy the account
-address, fund it from [faucet.sui.io](https://faucet.sui.io), then send to any valid
-testnet address. The in-app *Add test coins* button is a shortcut, but the public faucet
-rate-limits browser origins, so the website is the reliable route.
+**To use Live mode:** open **Account** → turn on *Live transfers* → copy your address →
+fund it at [faucet.sui.io](https://faucet.sui.io) → send to any valid testnet address.
 
-With Live transfers on, the send screen switches its limit to the account's real
-on-chain balance and says so. An unfunded account cannot start a transfer it would only
-fail, and when the network does reject one the message says what to do about it rather
-than reporting `Failed to fetch`.
+## Setup and installation
 
-## Running it
-
-Requires Node.js 18 or newer.
+Requires **Node.js 18 or newer**.
 
 ```bash
+git clone <this-repo>
+cd Mizan
 npm install
 npm run dev
 ```
 
-Then open http://localhost:5173.
+Open **http://localhost:5173**. That is the whole setup — no backend, no database, no
+API keys required.
 
-**For real Google sign-in**, create an OAuth client and point the app at it:
+**Optional — real Google sign-in.** Without a client id the app uses its own account
+chooser and everything else behaves identically, so the demo never hard-fails.
 
 1. Google Cloud Console → APIs & Services → Credentials
 2. Create credentials → OAuth client ID → **Web application**
@@ -305,99 +191,106 @@ Then open http://localhost:5173.
 4. Authorised redirect URIs: `http://localhost:5173/`
 5. `cp .env.example .env` and paste the client id into `VITE_GOOGLE_CLIENT_ID`
 
-Without a client id the app signs in with a demo identity and everything else behaves
-identically, so the build never hard-fails on stage.
-
-Once signed in, the account card carries the Sui address and a **Copy** button. Paste it
-into [faucet.sui.io](https://faucet.sui.io) to claim testnet SUI, then turn on *Live
-transfers* under **Account** and the send button signs a real testnet transaction.
-
 ```bash
 npm run build      # production build into dist/
 npm run preview    # serve the production build
 ```
 
-There is no backend and no database. The one environment variable is the Google client
-id above. The browser talks to the Sui fullnode directly, which is the point.
+**Browser note.** Trisha, the voice assistant, needs Chrome or Edge and microphone
+permission. Everything else works everywhere. Without a microphone you can drive her
+from the console:
+
+```js
+window.dispatchEvent(new CustomEvent('trisha:hear', { detail: 'send 20 to ayesha' }))
+```
+
+## How the sign-in works
+
+Being precise about this matters more than the pitch sounding good.
+
+- **Real:** a genuine Google OAuth 2.0 flow. The popup is Google's own account chooser,
+  and the name in the app is that account's.
+- **The wallet:** the Sui keypair is derived from the Google subject id —
+  `Ed25519(SHA-256(salt : sub))`. Same Google account, same Sui address, any machine.
+- **Not yet real:** this is **not** zkLogin. zkLogin derives the address from the same
+  credential but proves it in zero knowledge and leaves no key in the browser. This build
+  holds the key client-side and derives the address with a hash. The ID token signature
+  is also unverified, because that needs Google's JWKS on a server.
+- **The upgrade path:** swapping in real zkLogin replaces **one function** —
+  `keypairForSubject` in `src/lib/sui.js` — plus a proving service and a salt service.
+  Nothing else in the app changes.
 
 ## Project structure
 
 ```
 src/
+├── App.jsx                   screen state, the one write path to the ledger
 ├── main.jsx                  entry point
-├── App.jsx                   screen and sheet orchestration, account state
 ├── components/
-│   ├── SignIn.jsx            landing page, Google sign-in, provisioning sequence
-│   ├── GoogleChooser.jsx     account chooser shown when no OAuth client id is set
-│   ├── Dashboard.jsx         account card, monthly tiles and chart, wallet door
+│   ├── SignIn.jsx            landing page and Google sign-in
+│   ├── GoogleChooser.jsx     account chooser used when no OAuth client id is set
+│   ├── Dashboard.jsx         account card, monthly tiles and chart
 │   ├── Home.jsx              quick actions, activity list
-│   ├── SendSheet.jsx         send flow, execution, on-chain receipt
-│   ├── Sheets.jsx            receive, split, cash-out, account
+│   ├── SendSheet.jsx         send flow and on-chain receipt
+│   ├── Sheets.jsx            receive, split, cash out, account
+│   ├── Trisha.jsx            the voice assistant
 │   ├── Icons.jsx             inline SVG set
-│   └── wallet/
-│       ├── Wallet.jsx        wallet shell, balance, token page, bottom nav
-│       ├── Flows.jsx         send, receive, buy, sell, history, settings
-│       └── WalletUI.jsx      the wallet's own icons and screen primitives
+│   └── wallet/               the wallet: shell, flows, and its own UI parts
 ├── lib/
-│   ├── auth.js               Google OAuth redirect, ID token decoding, known accounts
+│   ├── sui.js                all chain access — keys, reads, transfer, faucet
+│   ├── auth.js               Google OAuth, ID token decoding, known accounts
+│   ├── ledger.js             every derived figure: totals, fees, spend limits
+│   ├── market.js             swap, provider and payout quotes
+│   ├── currency.js           the eleven display currencies
+│   ├── format.js             money, address and explorer-link formatting
+│   ├── recipients.js         saved send-to addresses
 │   ├── commands.js           spoken sentences → transactions, no model
-│   ├── market.js             prices, swap quotes, provider quotes, payout quotes
-│   ├── voice.js              wake word, recognition, speech, chime, mic level
-│   ├── recipients.js         saved send-to addresses, shared by the app and the wallet
-│   ├── sui.js                all chain interaction — key derivation, reads, transfer, faucet
-│   ├── ledger.js             every derived figure: month totals, fees, spend limits
-│   └── format.js             SUI, ringgit, address and explorer-link formatting
-├── data/
-│   └── mockData.js           every piece of fixture data, isolated in one file
-└── styles/
-    ├── global.css            design tokens and component styles
-    ├── chooser.css           the account chooser, in Google's own idiom
-    └── wallet.css            the wallet, in its own dark palette
-
-brand.md                      palette, typography and voice
+│   └── voice.js              wake word, recognition, speech, chime, mic level
+├── data/mockData.js          all fixture data, isolated in one file
+└── styles/                   global, wallet, chooser and assistant CSS
 ```
 
-Fixture data is confined to `data/mockData.js` and chain interaction to `lib/sui.js`, so
-the boundary between what is demonstrated and what is real is one import away in either
-direction.
+Fixture data lives only in `data/mockData.js`, and chain access only in `lib/sui.js` — so
+the line between what is demonstrated and what is real is one import away either way.
 
-## What is deliberately not built
+## What we deliberately did not build
 
-Naming these is more useful than pretending otherwise.
+Naming these is more useful than pretending.
 
-- **Cash-out settlement.** Converting to ringgit is a regulated money services activity
-  under Bank Negara Malaysia. Commercially this runs through a licensed exchange partner.
-  The wallet's buy and sell screens walk the full flow, quote a rate and charge a fee,
-  but no card is charged and no bank transfer is placed.
+- **Real cash-out settlement.** Converting to ringgit is a regulated money-services
+  activity under Bank Negara Malaysia. It runs through a licensed partner. Our screens
+  walk the full flow and charge the real fees, but no card is charged and no bank
+  transfer is placed.
 - **KYC and sanctions screening.** Required before any real deployment.
-- **zkLogin proper.** The address comes from the Google credential, but by hash rather
-  than by zero-knowledge proof, and the key sits in the browser. See the section above.
-- **Sponsored transactions.** Gasless UX needs a sponsor service to co-sign, which needs
-  a backend. Designed for, not implemented.
-- **Stablecoin denomination.** Everything in this build is denominated in SUI, which
-  means a balance held between two paydays carries SUI's price risk. A production build
-  settles in a USDC-equivalent on Sui and quotes the corridor in it.
+- **zkLogin proper.** See above.
+- **Sponsored transactions.** Gasless onboarding needs a sponsor service to co-sign,
+  which needs a backend.
+- **Stablecoin denomination.** This build counts in SUI, so a balance held between two
+  paydays carries SUI's price risk. Production settles in a USDC-equivalent on Sui.
 
 ## Roadmap
 
-1. Move module for milestone escrow and shared-custody group accounts
+1. Move module for escrow and shared-custody group accounts
 2. zkLogin proving and salt services, replacing the hash-derived keypair
 3. Sponsored transaction relayer for genuinely gasless onboarding
-4. Licensed off-ramp partner for the Malaysia, Bangladesh and Nepal corridors
+4. Licensed off-ramp partner for the Malaysia → Bangladesh, Nepal and Indonesia corridors
 5. React Native build sharing this component layer
 
-## Team
+## Team Red Sea
 
 | Name | Role |
 | --- | --- |
-| Eya Hia | Product, frontend, Sui integration, pitch |
-| *(add teammates)* | |
+| **Eya Hia** | Team lead — product, frontend, Sui integration |
+| **Abu Sadat Md Sayem** | Product and research |
+| **Shah Rabbi Hasan Foyej** | Frontend and testing |
 
 ## AI tool declaration
 
-Claude (Anthropic) was used for architecture discussion, code scaffolding and README
-drafting. All design decisions, product scoping and the demo build were directed by the
-team.
+**Claude (Anthropic), via Claude Code**, was used during development for architecture
+discussion, code scaffolding, refactoring and documentation drafting.
+
+All product scoping, design decisions, problem framing and the final build were directed
+and reviewed by the team. Every line of the submitted code was read and accepted by us.
 
 ## Licence
 

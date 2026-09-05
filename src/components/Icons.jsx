@@ -1,4 +1,4 @@
-/** One stroke weight, one grid, one library. */
+/* The Mizan icon set: one stroke weight, one 24px grid. */
 const s = {
   fill: 'none',
   stroke: 'currentColor',

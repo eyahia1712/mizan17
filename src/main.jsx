@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 
-/* Fonts are bundled, not fetched. A demo must not depend on venue wifi. */
+/* Fonts are bundled, not fetched, so the app does not depend on the network. */
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
 import '@fontsource/ibm-plex-sans-arabic/400.css';

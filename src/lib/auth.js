@@ -1,19 +1,14 @@
 /**
  * Google sign-in, as a popup.
  *
- * The popup is opened synchronously inside the click handler — that is the only
- * way browsers allow it — so the provisioning sequence can play in the main
- * window while the account chooser is up. The popup lands back on this same
- * origin, posts the ID token to its opener and closes itself.
+ * The popup must be opened straight out of the click handler or the browser
+ * blocks it. It lands back on this same origin, posts the ID token to its
+ * opener and closes. We get back the name, email and Google subject id; the
+ * subject id is what the Sui address is derived from.
  *
- * What this gives us: the real account the person picked — their name, email and
- * stable Google subject id. The subject id is what the Sui address is derived
- * from, so the same Gmail always produces the same wallet.
- *
- * What it does NOT do: verify the token signature. That needs Google's JWKS and
- * belongs on a server. The token arrives directly from Google over TLS and
- * `state` guards the round trip, which is the right posture for a prototype with
- * no backend — but it is not authentication you would ship.
+ * The token signature is not verified — that needs Google's JWKS on a server.
+ * The token comes straight from Google over TLS and `state` guards the round
+ * trip, which is enough for a prototype with no backend but not for production.
  */
 
 const CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '').trim();
@@ -44,8 +39,8 @@ function decodeJwtPayload(token) {
 }
 
 /**
- * Run inside the popup, before React mounts. Returns true when this page load
- * is an OAuth landing, in which case the document must not render the app.
+ * Runs inside the popup, before React mounts. Returns true when this page load
+ * is the OAuth landing, in which case the app must not render.
  */
 export function handlePopupCallback() {
   if (!window.opener || window.opener === window) return false;
@@ -63,10 +58,7 @@ export function handlePopupCallback() {
   return true;
 }
 
-/**
- * Open Google's account chooser and resolve with the chosen profile.
- * Must be called directly from a click handler or the popup is blocked.
- */
+/** Open Google's account chooser and resolve with the chosen profile. */
 export function signInWithGoogle() {
   const state = randomToken();
   const params = new URLSearchParams({
@@ -102,7 +94,7 @@ export function signInWithGoogle() {
       settled = true;
       window.removeEventListener('message', onMessage);
       clearInterval(watch);
-      try { popup.close(); } catch { /* already gone */ }
+      try { popup.close(); } catch { /* already closed */ }
       fn(arg);
     }
 
@@ -127,7 +119,7 @@ export function signInWithGoogle() {
       }
     }
 
-    // The popup being dismissed is not an event we get told about.
+    // Nothing tells us when the popup is dismissed, so poll for it.
     const watch = setInterval(() => {
       if (popup.closed) finish(reject, new Error('Sign-in was cancelled.'));
     }, 400);
@@ -144,21 +136,17 @@ function describe(code) {
   return `Google returned an error (${code}).`;
 }
 
-/* ------------------------------------------------------------------ */
-/* The account chooser, without a client id                            */
-/* ------------------------------------------------------------------ */
+/* ------------------- accounts without a client id ----------------- */
 
 /**
- * A web page cannot read the Google accounts signed in on the device — only
- * Google can show you those, and only through a real OAuth client. So the app
- * takes both paths:
+ * A web page cannot list the Google accounts signed in on the device; only
+ * Google can, and only through a registered OAuth client. So:
  *
- *   • With VITE_GOOGLE_CLIENT_ID set, `signInWithGoogle()` above opens the
- *     genuine chooser and the accounts listed are whatever is on the device.
- *   • Without it, the app shows its own chooser over this list, which is
- *     seeded below and then remembered in localStorage as accounts are added.
+ *   • with VITE_GOOGLE_CLIENT_ID set, signInWithGoogle() opens the real chooser
+ *   • without it, the app shows its own chooser over the list below, which is
+ *     extended in localStorage as accounts are added
  *
- * Edit SEED_ACCOUNTS to change which accounts a fresh browser starts with.
+ * Edit SEED_ACCOUNTS to change what a fresh browser starts with.
  */
 const SEED_ACCOUNTS = [
   { name: 'Eya Hia',  email: 'kham3782@gmail.com' },
@@ -181,14 +169,14 @@ export function deviceAccounts() {
   try {
     saved = JSON.parse(localStorage.getItem(ACCOUNTS_KEY) ?? '[]');
   } catch {
-    /* unreadable or unavailable — fall back to the seed alone */
+    // unreadable storage — fall back to the seed accounts
   }
 
   const list = [...SEED_ACCOUNTS, ...(Array.isArray(saved) ? saved : [])]
     .filter((a) => a && a.email)
     .map(shape);
 
-  // Last write wins, so re-adding an account renames it rather than duplicating.
+  // Last write wins, so re-adding an account renames it instead of duplicating it.
   const byEmail = new Map(list.map((a) => [a.email.toLowerCase(), a]));
   return [...byEmail.values()];
 }
@@ -201,7 +189,7 @@ export function rememberAccount(account) {
       .filter((a) => a?.email?.toLowerCase() !== next.email.toLowerCase());
     localStorage.setItem(ACCOUNTS_KEY, JSON.stringify([...kept, next]));
   } catch {
-    /* non-fatal: the account still works for this session */
+    // non-fatal: the account still works for this session
   }
   return next;
 }
@@ -216,6 +204,6 @@ export function forgetAccount(email) {
       ))
     );
   } catch {
-    /* non-fatal */
+    // non-fatal
   }
 }

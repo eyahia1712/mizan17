@@ -1,28 +1,27 @@
 /**
- * Demo dataset. Everything here is fabricated so the product runs without a
- * server. The one thing that is NOT fabricated is the Sui transaction in live
- * mode — see src/lib/sui.js.
+ * All fixture data, kept in one file so the line between what is demonstrated
+ * and what is real is easy to see. Everything here is made up. The one thing
+ * that is not is a live-mode transfer — see src/lib/sui.js.
  *
- * The unit of account is SUI. There is no dollar anywhere in this product:
- * balances, transfers, fees and history are all denominated in SUI, and the
- * only second currency is the ringgit the money lands in.
+ * Balances, transfers and fees are denominated in SUI; ringgit is only what
+ * the money is worth on the way in and out.
  */
 
 /** Demo market rates, in ringgit. */
 export const SUI_TO_MYR = 14.86;
 export const USDT_TO_MYR = 4.21;
 
-/** Demo 24-hour moves, for the wallet's market rows. */
+/** Demo 24-hour price moves, for the wallet's market rows. */
 export const SUI_CHANGE_24H = 2.41;
 export const USDT_CHANGE_24H = 0.01;
 
-/** Sui gas is a rounding error. This is the flat network fee we charge. */
+/** Flat network fee charged per transfer. Real Sui gas is smaller than this. */
 export const NETWORK_FEE_SUI = 0.005;
 
-/** What the off-ramp takes converting USDT to ringgit, as a fraction. */
+/** What the off-ramp takes converting USDT to ringgit. */
 export const SELL_FEE_RATE = 0.009;
 
-/** Every asset this wallet holds, and what one unit is worth. */
+/** The assets this wallet holds, and what one unit is worth. */
 export const ASSETS = {
   SUI:  { symbol: 'SUI',  name: 'Sui',        myr: SUI_TO_MYR,  dp: 2, change: SUI_CHANGE_24H },
   USDT: { symbol: 'USDT', name: 'Tether USD', myr: USDT_TO_MYR, dp: 2, change: USDT_CHANGE_24H },
@@ -31,14 +30,14 @@ export const ASSETS = {
 export const user = {
   name: 'Eya Hia',
   email: 'demo@mizan.app',
-  /** The opening balances. Nothing may be spent past them. */
+  /** Opening balances. Nothing can be spent past them. */
   balanceSui: 486.5,
   balanceUsdt: 24.8,
 };
 
 /**
- * Deterministic stand-in for a Sui digest: base58-shaped, stable across
- * reloads, so a receipt opened twice shows the same reference.
+ * A stand-in for a Sui digest: base58-shaped and stable across reloads, so a
+ * receipt opened twice shows the same reference.
  */
 const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 export function digestFor(seed) {
@@ -57,7 +56,7 @@ export function digestFor(seed) {
   return out;
 }
 
-/** A deterministic 0x-address, so a demo contact always has the same one. */
+/** A stable 0x address, so a demo contact always has the same one. */
 export function addressFor(seed) {
   let x = 2166136261;
   let out = '';
@@ -81,9 +80,8 @@ export const contacts = [
 const handleFor = (name) => contacts.find((c) => c.name === name)?.handle;
 
 /**
- * Six months of history, with real timestamps. Every figure the app shows —
- * the month chart, the tiles, the wallet's totals — is computed from this
- * list. Nothing is hard-coded twice.
+ * Six months of history. Every figure in the app — the month chart, the tiles,
+ * the wallet totals — is computed from this list rather than stored twice.
  */
 const SEED = [
   // September 2026 (current month)
@@ -155,9 +153,7 @@ export const payoutMethods = [
   { id: 'p3', code: 'NP', name: 'Mobile wallet',           sub: 'Instant' },
 ];
 
-/* ------------------------------------------------------------------ */
-/* Funding sources — the wallet's on-ramp and off-ramp                  */
-/* ------------------------------------------------------------------ */
+/* ------------- funding sources: on-ramp and off-ramp -------------- */
 
 export const seedCards = [
   { id: 'k1', kind: 'card', brand: 'Visa',       last4: '4291', exp: '08/29', holder: 'EYA HIA' },
@@ -166,8 +162,7 @@ export const seedCards = [
 
 /**
  * Where ringgit lands. Touch 'n Go settles in minutes because it is an
- * e-wallet; a bank transfer does not, and the flow says so rather than
- * promising both the same thing.
+ * e-wallet; a bank transfer takes days, and the flow says so.
  */
 export const payoutRails = [
   {
@@ -184,10 +179,7 @@ export const payoutRails = [
   },
 ];
 
-/**
- * Card and bank rails on the way *in*. A Malaysian on-ramp takes cards, FPX
- * bank transfer and the local e-wallets, so all three are here.
- */
+/** Ways to pay on the way in. A Malaysian on-ramp takes all three. */
 export const buyRails = [
   ...seedCards.map((c) => ({ ...c, sub: `Expires ${c.exp}`, eta: 'Instant' })),
   { id: 'tng-in',  kind: 'ewallet', brand: "Touch 'n Go eWallet", short: 'TNG',  last4: '8891', sub: 'Linked to +60 12 887 4410', eta: 'Instant' },
@@ -195,10 +187,9 @@ export const buyRails = [
 ];
 
 /**
- * On-ramp providers, the way a wallet actually buys: it does not sell you the
- * coin itself, it shops the order to licensed providers and shows what each
- * would give you. They differ on spread and fee, which is the whole reason the
- * comparison screen exists.
+ * On-ramp providers. A wallet does not sell you the coin itself — it shops the
+ * order to licensed providers, and they differ on both fee and spread, which is
+ * what the comparison screen is for.
  */
 export const onrampProviders = [
   { id: 'moonpay', name: 'MoonPay', feeRate: 0.0149, spread: 0.006, minMyr: 50,  eta: '2–5 minutes',  kyc: 'verified' },

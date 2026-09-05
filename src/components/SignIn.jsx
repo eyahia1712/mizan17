@@ -3,8 +3,7 @@ import { provisionSteps } from '../data/mockData.js';
 import { googleConfigured, signInWithGoogle } from '../lib/auth.js';
 import GoogleChooser from './GoogleChooser.jsx';
 
-/* Three hard blocks. Blocks that almost touch look like a mistake; blocks
-   that touch look like a decision — so the gap is deliberate. */
+/* The three figures on the landing page. */
 const FIGURES = [
   { cls: 'cell--v', v: '2s',        l: 'to settle, any corridor' },
   { cls: 'cell--s', v: '0.005 SUI', l: 'network fee per transfer' },
@@ -18,9 +17,9 @@ export default function SignIn({ onDone }) {
   const profileRef = useRef(null);
   const modeRef = useRef('local');              // 'google' when a client id is set
 
-  // The provisioning sequence runs first, so the wallet exists before an
-  // account is attached to it. On the Google path it holds on the last step
-  // until the chooser comes back, so it never claims to be finished first.
+  // The provisioning sequence runs first, so the wallet exists before an account
+  // is attached to it. On the Google path it waits on the last step until the
+  // chooser comes back, rather than claiming to be finished before it is.
   useEffect(() => {
     if (phase !== 'working') return;
 
@@ -35,7 +34,7 @@ export default function SignIn({ onDone }) {
     return () => clearTimeout(t);
   }, [phase, step]);
 
-  // Sequence finished. Either the real chooser already answered, or it is now
+  // Sequence finished. Either the real chooser has already answered, or it is
   // this app's turn to ask which account to use.
   useEffect(() => {
     if (phase !== 'working' || step < provisionSteps.length) return;
@@ -59,7 +58,7 @@ export default function SignIn({ onDone }) {
 
     if (modeRef.current === 'local') return;
 
-    // Must be opened straight out of the click, or the browser blocks it.
+    // Must be opened straight out of the click, or the browser blocks the popup.
     signInWithGoogle()
       .then((profile) => { profileRef.current = profile; })
       .catch((e) => {

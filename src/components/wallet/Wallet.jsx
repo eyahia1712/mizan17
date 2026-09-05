@@ -1,23 +1,20 @@
 /**
  * The wallet.
  *
- * A self-contained crypto wallet living inside Mizan, laid out the way the
- * wallets people already use are laid out: a balance, a row of round actions,
- * a token list, a bottom bar. It is the same ledger the rest of the app reads,
- * so anything done here moves the dashboard behind it.
- *
- * Everything is denominated in SUI. Ringgit appears only as what the money is
- * worth on the way in and out.
+ * A self-contained crypto wallet inside Mizan, laid out the way the wallets
+ * people already use are: a balance, a row of round actions, a token list, a
+ * bottom bar. It reads and writes the same ledger as the rest of the app, so
+ * anything done here moves the dashboard behind it.
  */
 
 import { useState, useMemo, useEffect } from 'react';
-import { seedCards, buyRails, payoutRails, ASSETS } from '../../data/mockData.js';
+import { buyRails, payoutRails, ASSETS } from '../../data/mockData.js';
 import { token, fiat, pct, shortAddr, cash } from '../../lib/format.js';
 import { byNewest } from '../../lib/ledger.js';
 import { rateMyr } from '../../lib/market.js';
 import {
   Screen, Sparkline, AssetMark, TrustMark, CurrencyPicker,
-  IcSend, IcReceive, IcBuy, IcSell, IcHome, IcClock, IcCard, IcSwap, IcGear,
+  IcSend, IcReceive, IcBuy, IcSell, IcHome, IcClock, IcCard, IcSwap,
   IcQr, IcDown, IcClose, IcNext,
 } from './WalletUI.jsx';
 import {
@@ -26,11 +23,10 @@ import {
 
 const RANGES = ['1D', '1W', '1M', '1Y', 'ALL'];
 
-
 export default function Wallet({ profile, address, balances, txs, live, setLive, keypair, spendable, currency, onCurrency, onCommit, openOn = 'home', prefill = null, close }) {
   const [view, setView] = useState(openOn);     // home | token | send | receive | buy | sell | swap | history | settings | tx
   const [openTx, setOpenTx] = useState(null);
-  const [token_, setToken] = useState('SUI');
+  const [asset, setAsset] = useState('SUI');
   const [extraCards, setExtraCards] = useState([]);
 
   const rails = useMemo(
@@ -79,7 +75,7 @@ export default function Wallet({ profile, address, balances, txs, live, setLive,
           />
         );
       case 'token':
-        return <TokenScreen asset={token_} balances={balances} txs={txs} onAct={setView} onOpen={openReceipt} onExit={home} />;
+        return <TokenScreen asset={asset} balances={balances} txs={txs} onAct={setView} onOpen={openReceipt} onExit={home} />;
       default:
         return (
           <HomeScreen
@@ -90,7 +86,7 @@ export default function Wallet({ profile, address, balances, txs, live, setLive,
             currency={currency}
             onCurrency={onCurrency}
             onAct={setView}
-            onOpenToken={(a) => { setToken(a); setView('token'); }}
+            onOpenToken={(a) => { setAsset(a); setView('token'); }}
             onOpen={openReceipt}
           />
         );
@@ -128,9 +124,7 @@ export default function Wallet({ profile, address, balances, txs, live, setLive,
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Home                                                                */
-/* ------------------------------------------------------------------ */
+/* ------------------------------ home ----------------------------- */
 
 const ACTIONS = [
   { k: 'send',    l: 'Send',    I: IcSend },
@@ -156,8 +150,7 @@ function ActionRow({ onAct }) {
 function HomeScreen({ profile, address, balances, recent, currency, onCurrency, onAct, onOpenToken, onOpen }) {
   const [tab, setTab] = useState('tokens');
 
-  /* The headline figure is what everything is worth, not what one coin is —
-     a wallet holding two assets cannot lead with just one of them. */
+  /* The headline figure is what the whole wallet is worth, both assets together. */
   const worth = Object.entries(balances).reduce((n, [asset, held]) => n + held * rateMyr(asset), 0);
 
   return (
@@ -178,8 +171,8 @@ function HomeScreen({ profile, address, balances, recent, currency, onCurrency, 
 
       <div className="tw-body">
         <div className="tw-total">
-          {/* The figure and the unit it is counted in, together — the currency
-              is a property of the number, not a setting buried elsewhere. */}
+          {/* The figure and the currency it is counted in sit together, rather
+              than the currency being a setting somewhere else. */}
           <div className="tw-total-line">
             <p className="tw-total-amt">{cash(worth)}</p>
             <CurrencyPicker value={currency} onChange={onCurrency} />
@@ -241,9 +234,7 @@ function HomeScreen({ profile, address, balances, recent, currency, onCurrency, 
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* SUI, as a token page                                                */
-/* ------------------------------------------------------------------ */
+/* --------------------------- token page -------------------------- */
 
 function TokenScreen({ asset = 'SUI', balances, txs, onAct, onOpen, onExit }) {
   const [range, setRange] = useState('1M');

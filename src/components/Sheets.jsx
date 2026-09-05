@@ -6,9 +6,7 @@ import { whenLabel, round, feeOnTop } from '../lib/ledger.js';
 import { fundFromFaucet } from '../lib/sui.js';
 import { Tick, Copy, External } from './Icons.jsx';
 
-/* ------------------------------------------------------------------ */
-/* Receive                                                             */
-/* ------------------------------------------------------------------ */
+/* ---------------------------- receive ---------------------------- */
 
 export function ReceiveSheet({ close, address }) {
   const [copied, setCopied] = useState(false);
@@ -45,8 +43,8 @@ export function ReceiveSheet({ close, address }) {
 }
 
 /**
- * A deterministic block pattern derived from the address. Stands in for a
- * scannable code without pulling in a QR dependency.
+ * A block pattern derived from the address. It stands in for a scannable code
+ * without pulling in a QR library.
  */
 function QrBlock({ value = '', size = 15 }) {
   const cells = [];
@@ -81,15 +79,12 @@ function QrBlock({ value = '', size = 15 }) {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Split                                                               */
-/* ------------------------------------------------------------------ */
+/* ----------------------------- split ----------------------------- */
 
 /**
- * Splitting a bill is not just arithmetic — it is a claim on somebody, and a
- * claim needs a reason. "Nurul owes you 15 SUI" means nothing a week later;
- * "Wi-Fi, September, between 4" is something she can recognise and agree with.
- * So the occasion is asked for first, and it travels with the request.
+ * Splitting a bill is a claim on somebody, and a claim needs a reason: "Nurul
+ * owes you 15 SUI" means nothing a week later, "Wi-Fi, September, between 4"
+ * does. So the occasion is asked for first and travels with the request.
  */
 
 const OCCASIONS = ['Room rent', 'Wi-Fi bill', 'Utilities', 'Groceries', 'Dinner', 'Transport'];
@@ -105,7 +100,7 @@ export function SplitSheet({ close, onRequest }) {
   const value = Number(total) || 0;
   const each = heads > 0 ? value / heads : 0;
 
-  /* You are always one of the heads, so the others can never exceed the rest. */
+  /* You are always one of the heads, so the others are one fewer. */
   const others = heads - 1;
   const named = picked.slice(0, others);
   const unnamed = Math.max(0, others - named.length);
@@ -116,7 +111,7 @@ export function SplitSheet({ close, onRequest }) {
   const toggle = (id) =>
     setPicked((p) => {
       if (p.includes(id)) return p.filter((x) => x !== id);
-      if (p.length >= others) return p;            // no more seats at this table
+      if (p.length >= others) return p;            // no seats left
       return [...p, id];
     });
 
@@ -239,9 +234,7 @@ export function SplitSheet({ close, onRequest }) {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Cash out                                                            */
-/* ------------------------------------------------------------------ */
+/* ---------------------------- cash out --------------------------- */
 
 export function WithdrawSheet({ close, balanceSui, onOpenWallet }) {
   const [method, setMethod] = useState(payoutMethods[0].id);
@@ -279,13 +272,11 @@ export function WithdrawSheet({ close, balanceSui, onOpenWallet }) {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Transaction receipt                                                 */
-/* ------------------------------------------------------------------ */
+/* ------------------------- transaction receipt ------------------- */
 
 /**
- * Saffron is the settled-event colour, so it carries both directions —
- * the sign and the label say which way the money went, not a second hue.
+ * The receipt. Both directions use the same saffron block — the sign and the
+ * label say which way the money went, not a second colour.
  */
 export function TransactionSheet({ close, tx }) {
   const incoming = tx.dir === 'in';
@@ -348,14 +339,11 @@ export function TransactionSheet({ close, tx }) {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Account                                                             */
-/* ------------------------------------------------------------------ */
+/* ---------------------------- account ---------------------------- */
 
 /**
- * Holds the one control the judges need and the user never does: the switch
- * between fixture data and a real testnet transfer. Kept off the main screens
- * on purpose.
+ * The account sheet. It holds the Live transfers switch — the one control that
+ * turns a demo transfer into a real testnet one — kept off the main screens.
  */
 export function AccountSheet({ close, profile, address, live, setLive, balanceSui, onOpenWallet }) {
   const [funding, setFunding] = useState(false);

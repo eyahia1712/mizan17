@@ -1,12 +1,11 @@
 /* ============================================================
-   MIZAN — design tokens
+   MIZAN — design tokens and app styles
 
-   Swiss editorial. Paper, ink, vermillion, saffron, stone.
-   Large type, hard colour blocks, flat fills, no gradients
-   and no shadows.
+   Swiss editorial: paper, ink, vermillion, saffron, stone.
+   Large type, hard colour blocks, flat fills. No gradients,
+   no shadows.
 
-   The rule that makes it work: COLOUR ALWAYS DOES A JOB, and
-   the same hue never means two things.
+   Every colour does one job, and no hue means two things:
      ink         you, your account, the primary action
      vermillion  money leaving, and the live state
      saffron     a settled event
@@ -41,14 +40,13 @@
   --radius-lg:8px;
   --gutter:22px;
 
-  /* Two deliberate measures. The landing is a poster and stays narrow; the
-     account page needs room for a card beside a chart. */
+  /* The landing stays narrow; the account page needs room for a card
+     beside a chart. */
   --maxw-landing:820px;
   --maxw-app:1040px;
 }
 
-/* Commit to light. This gets demonstrated on a projector and printed for
-   judges; a dark theme is a consumer signal working against the direction. */
+/* Light only. This gets shown on a projector and printed for judges. */
 @media (prefers-color-scheme:dark) { :root { color-scheme:light; } }
 
 /* ---------- reset ---------- */
@@ -65,8 +63,7 @@ body {
   text-rendering:optimizeLegibility;
 }
 
-/* Type gets big and it gets tight. Timid type is what makes a
-   colourful design look amateur. */
+/* Headings are large and tightly tracked. */
 h1, h2, h3, h4 { margin:0; font-weight:500; letter-spacing:-.02em; line-height:1.15; }
 h1 { font-size:clamp(40px,7vw,76px); line-height:1.02; letter-spacing:-.035em; }
 h2 { font-size:clamp(24px,3vw,34px); letter-spacing:-.025em; }
@@ -128,8 +125,7 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
 
 .landing .steps { margin-top:var(--s5); max-width:340px; }
 
-/* Blocks that almost touch look like a mistake; blocks that touch look like a
-   decision — so the gap is deliberate, not incidental. */
+/* The three figures on the landing page. */
 .strip {
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(min(190px,100%),1fr));
@@ -176,7 +172,7 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
 .step.on { color:var(--ink); }
 .step.on .dot { background:var(--vermillion); }
 
-/* Ink is primary; nothing else is filled. */
+/* Ink is the primary button; nothing else is filled. */
 .btn {
   display:inline-flex; align-items:center; justify-content:center; gap:var(--s2);
   padding:13px 24px;
@@ -220,7 +216,7 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 
-/* The two doors out of this page, side by side at the end of the header. */
+/* Wallet and Account, side by side at the end of the header. */
 .app-top-actions { flex:none; display:flex; align-items:center; gap:var(--s2); }
 
 .btn-line {
@@ -233,8 +229,7 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
   transition:background .15s ease, color .15s ease;
 }
 
-/* Filled, because the wallet is the primary thing to open from here — and ink
-   is the hue that already means "you, and the action you can take". */
+/* Filled, because the wallet is the primary thing to open from here. */
 .btn-wallet { background:var(--ink); color:var(--paper); }
 .btn-wallet:hover { background:var(--ink); color:var(--paper); opacity:.86; }
 .btn-line-v {
@@ -262,9 +257,8 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
   .identity { text-align:left; flex:1; }
 }
 
-/* Narrow: the wordmark takes its own line, then the name and the two doors
-   share the next one. Three things fighting for one row is what makes a
-   header look broken. */
+/* Narrow screens: the wordmark takes its own line, then the name and the
+   two buttons share the next one. */
 @media (max-width:720px) {
   .app-top { gap:var(--s3) var(--s4); padding:18px 0; }
   .app-top .hero-mark { flex:1 0 100%; margin-bottom:0; }
@@ -277,9 +271,8 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
    PAYMENT CARD — the one saffron block on the page
    ============================================================ */
 
-/* A payment card is a card: it has a size, and it is not "as wide as the
-   column happens to be". Capped near the real 85.6mm proportion so the
-   balance sits on it rather than floating in a field of yellow. */
+/* Capped near the real 85.6mm card proportion, so the balance sits on a card
+   rather than floating in a field of yellow. */
 .pcard {
   width:100%; max-width:380px;
   background:var(--saffron);
@@ -301,7 +294,7 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
 .tag.on { background:var(--vermillion); border-color:var(--vermillion); color:#fff; }
 .pcard-mark { font-size:13px; font-weight:500; letter-spacing:.14em; }
 
-/* The chip reads as a payment card without a photograph of one. */
+/* The chip reads as a payment card without using a photograph. */
 .chip {
   width:34px; height:25px;
   margin:var(--s4) 0 var(--s3);
@@ -317,7 +310,7 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
 .chip::before { top:10px; }
 .chip::after  { top:18px; }
 
-/* Hero figure — proportional digits; tabular reads loose at this size. */
+/* Proportional digits — tabular reads loose at this size. */
 .pcard-amt { font-size:clamp(30px,3.4vw,38px); font-weight:500; line-height:1; letter-spacing:-.035em; }
 .pcard-sub { margin-top:var(--s2); font-size:13.5px; color:var(--saffron-mid); }
 
@@ -371,7 +364,7 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
 .tiles-note { margin:0 0 var(--s6); font-size:12.5px; color:var(--ink-3); }
 
 /* ============================================================
-   SPEND CHART — one series, so no legend; the title names it
+   SPEND CHART — one series, so the title does the work of a legend
    ============================================================ */
 
 .chart { display:flex; gap:var(--s3); }
@@ -406,7 +399,7 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
   padding:0;
 }
 
-/* Cap the bar and let the band's leftover be air. */
+/* Cap the bar width; the leftover in the band is air. */
 .bar {
   position:relative;
   width:100%; max-width:24px;
@@ -414,8 +407,8 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
   border-radius:4px 4px 0 0;
   transition:opacity .15s ease;
 }
-/* One month is in focus at a time; the rest recede rather than disappear.
-   The current month keeps its own colour whether or not it is the one picked. */
+/* One month is in focus at a time and the rest recede. The current month keeps
+   its own colour whether or not it is the one picked. */
 .chart-col .bar { opacity:.3; }
 .chart-col.hot .bar { opacity:.6; }
 .chart-col.picked .bar, .chart-col.picked.hot .bar { opacity:1; }
@@ -512,7 +505,7 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
 }
 .tx-icon svg { width:15px; height:15px; }
 .tx-icon.out { background:var(--vermillion-tint); color:var(--vermillion-text); }
-/* A swap moved value sideways, not out — neutral, like the surface it sits on. */
+/* A swap moved value sideways, not out, so it gets a neutral mark. */
 .tx-icon.swap { background:var(--stone); color:var(--ink-2); }
 
 .tx-body { flex:1; min-width:0; }
@@ -523,14 +516,14 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
 }
 .tx-body .t2 { display:block; margin-top:1px; font-size:12px; color:var(--ink-3); }
 
-/* The amount and what it is worth are one column, right-aligned together. */
+/* The amount and what it is worth share one right-aligned column. */
 .tx-amt {
   flex:none;
   display:flex; flex-direction:column; align-items:flex-end; gap:1px;
   font-size:14.5px; font-weight:500; letter-spacing:-.02em;
 }
 .tx-amt.out { color:var(--vermillion-text); }
-/* Asked for, not arrived — so it recedes rather than reading as a credit. */
+/* Asked for, not arrived, so it recedes rather than reading as a credit. */
 .tx-amt.pending { color:var(--ink-3); }
 .tx-fiat { font-size:11.5px; font-weight:400; color:var(--ink-3); letter-spacing:0; }
 
@@ -570,7 +563,7 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
 
 .grab { width:34px; height:3px; background:var(--hairline); margin:0 auto var(--s5); }
 
-/* With room on screen a bottom sheet is the wrong idiom — centre it. */
+/* With room on screen, centre the sheet instead of docking it to the bottom. */
 @media (min-width:760px) {
   .scrim { align-items:center; justify-content:center; padding:var(--s5); }
   .sheet {
@@ -640,8 +633,8 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
 /* Picker */
 .picker { margin-bottom:var(--s4); border-top:1px solid var(--hairline); }
 
-/* Two ways to name a recipient. It needs air under it: flush against the list
-   below, the tabs read as a heading for it rather than a choice about it. */
+/* Saved / New address. Needs air under it, or the tabs read as a heading for
+   the list rather than a choice about it. */
 .seg {
   display:flex; gap:var(--s2);
   margin-bottom:var(--s6);
@@ -825,7 +818,7 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
 
 /* ---------- narrow screens, last so they win the cascade ---------- */
 @media (max-width:520px) {
-  /* The balance is on the card right below; in the button it is what breaks. */
+  /* The balance is on the card right below, so drop it from the button. */
   .btn-line-v { display:none; }
   .btn-line { padding:10px 16px; }
 
@@ -839,8 +832,7 @@ input { font-family:inherit; font-size:inherit; color:inherit; }
    SPLIT — the occasion, and how many ways
    ============================================================ */
 
-/* Named "reason", not "chip" — the payment card already owns .chip, and two
-   things called the same thing in one stylesheet is a bug waiting to happen. */
+/* Named "reason", not "chip" — the payment card already owns .chip. */
 .reasons { display:flex; flex-wrap:wrap; gap:var(--s2); margin-top:var(--s2); }
 .reason {
   padding:7px 13px;

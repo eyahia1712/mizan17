@@ -1,15 +1,12 @@
 /**
- * Ears, voice and a chime — all of it in the browser.
+ * Listening, speaking and a chime — all of it in the browser.
  *
- * Nothing here talks to a server of ours. Speech recognition is the platform's
- * own (`SpeechRecognition`), speech output is `speechSynthesis`, and the chime
- * is two oscillators rather than a sound file, so the assistant works with the
- * venue wifi down and adds nothing to the bundle.
+ * Nothing here talks to a server of ours: speech recognition is the platform's
+ * own `SpeechRecognition`, speech output is `speechSynthesis`, and the chime is
+ * two oscillators rather than an audio file.
  *
- * One thing worth being straight about: in Chrome, `SpeechRecognition` sends
- * audio to Google to transcribe it. That is the browser's implementation, not
- * a choice this code makes, and it is the reason the assistant is only ever
- * armed while someone is signed in.
+ * Worth knowing: in Chrome, `SpeechRecognition` sends audio to Google to
+ * transcribe. That is the browser's implementation, not a choice made here.
  */
 
 const Recogniser = typeof window !== 'undefined'
@@ -18,16 +15,12 @@ const Recogniser = typeof window !== 'undefined'
 
 export const voiceSupported = () => !!Recogniser;
 
-/* ------------------------------------------------------------------ */
-/* Listening                                                           */
-/* ------------------------------------------------------------------ */
+/* --------------------------- listening --------------------------- */
 
 /**
- * A recogniser that stays up.
- *
- * Chrome stops listening on its own after a stretch of silence, so continuous
- * really means "restart it every time it gives up". The backoff keeps a
- * failing microphone from turning into a tight loop.
+ * A recogniser that stays up. Chrome stops listening on its own after a stretch
+ * of silence, so "continuous" means restarting it every time it gives up. The
+ * backoff stops a failing microphone from becoming a tight loop.
  */
 export function createEar({ lang = 'en-US', onResult, onError, onListening } = {}) {
   if (!Recogniser) return null;
@@ -85,19 +78,14 @@ export function createEar({ lang = 'en-US', onResult, onError, onListening } = {
       clearTimeout(timer);
       try { rec.abort(); } catch { /* never started */ }
     },
-    /** Deafen without stopping, so the assistant does not transcribe itself. */
+    /** Go deaf without stopping, so the assistant does not transcribe itself. */
     mute(value) { muted = value; },
   };
 }
 
-/* ------------------------------------------------------------------ */
-/* How loud                                                            */
-/* ------------------------------------------------------------------ */
+/* ------------------------- microphone level ---------------------- */
 
-/**
- * A live level from the microphone, so the orb moves with the voice instead of
- * looping an animation that has nothing to do with what is being said.
- */
+/** A live level from the microphone, so the orb moves with the voice. */
 export function createLevelMeter() {
   let ctx = null;
   let stream = null;
@@ -144,11 +132,9 @@ export function createLevelMeter() {
   };
 }
 
-/* ------------------------------------------------------------------ */
-/* Speaking                                                            */
-/* ------------------------------------------------------------------ */
+/* ---------------------------- speaking --------------------------- */
 
-/** Prefer a voice that sounds like the name on the panel. */
+/** Prefer a voice that suits the name on the panel. */
 function pickVoice() {
   const voices = speechSynthesis.getVoices();
   if (!voices.length) return null;
@@ -175,16 +161,11 @@ export function say(text, { onStart, onEnd } = {}) {
 
 export const hush = () => { try { speechSynthesis.cancel(); } catch { /* nothing to stop */ } };
 
-/* ------------------------------------------------------------------ */
-/* The chime                                                           */
-/* ------------------------------------------------------------------ */
+/* ----------------------------- chime ----------------------------- */
 
 let audio = null;
 
-/**
- * Two notes, synthesised. Deliberately not a recording of anyone else's
- * assistant — this one is ours, and it is fifteen lines rather than an asset.
- */
+/** Two synthesised notes. No audio file to load. */
 export function chime(kind = 'wake') {
   try {
     audio ??= new (window.AudioContext || window.webkitAudioContext)();
@@ -211,22 +192,19 @@ export function chime(kind = 'wake') {
       osc.stop(t + 0.24);
     }
   } catch {
-    /* no audio context — the panel still appears */
+    // no audio context — the panel still appears
   }
 }
 
-/* ------------------------------------------------------------------ */
-/* The wake word                                                       */
-/* ------------------------------------------------------------------ */
+/* --------------------------- wake word --------------------------- */
 
 /**
  * Recognisers do not know the name, so they guess at it. These are what
- * "Trisha" actually comes back as, and matching the guesses is the difference
- * between an assistant that answers and one that ignores you.
+ * "Trisha" actually comes back as in testing.
  */
 const WAKE = /\b(hey|hi|hello|ok|okay|yo)[\s,]+(trisha|tricia|trischa|trisa|tresha|treasure|tricha|trish|teresa|theresa|tarisha|trisha's|patricia|tricia's)\b/i;
 
-/** Where the name ends, so the rest of the sentence can be taken as the command. */
+/** Where the name ends, so the rest of the sentence can be read as a command. */
 export function detectWake(text) {
   const match = WAKE.exec(text);
   if (!match) return null;

@@ -2,16 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { deviceAccounts, rememberAccount } from '../lib/auth.js';
 
 /**
- * The account chooser.
+ * The app's own account chooser, shown when no OAuth client id is configured.
  *
- * This is the app's own chooser, shown when no OAuth client id is configured.
- * It lists the accounts this browser knows about and hands the chosen one back
- * exactly as Google's chooser would — name, email and a stable subject id, from
- * which the Sui address is derived.
+ * It lists the accounts this browser knows about and returns the chosen one in
+ * the same shape Google's chooser would — name, email and a stable subject id,
+ * which is what the Sui address is derived from.
  *
- * It is deliberately Google's layout rather than Mizan's: at this moment in the
- * flow the person is being asked to trust a familiar screen, and inventing a
- * new one for it would be the wrong kind of originality.
+ * It uses Google's layout rather than Mizan's on purpose: this is the moment
+ * someone is asked to trust the screen, and a familiar one is easier to trust.
  */
 
 const AVATAR_COLOURS = ['#1a73e8', '#d93025', '#188038', '#e37400', '#9334e6', '#00838f'];

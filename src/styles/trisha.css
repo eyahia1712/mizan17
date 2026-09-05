@@ -1,24 +1,17 @@
 /* ============================================================
-   TRISHA
+   TRISHA — the voice assistant panel
 
-   The assistant panel. It sits bottom-right and is the only
-   thing in this product with a blur in it: the system bans
-   gradients and shadows because they make flat information look
-   soft, but an orb that does not glow does not read as
-   listening. The exception is one element wide and earns its
-   keep — everything around it is the same paper, ink and
-   hairlines as the rest of the app.
+   Sits bottom-right. The orb is the only blurred element in the
+   product: the design system bans gradients and shadows, but a
+   flat disc does not read as listening. Everything around it is
+   the same paper, ink and hairlines as the rest of the app.
    ============================================================ */
 
 /* ---------- the standing badge ---------- */
 
-/*
- * Pink, and the only pink in the product. Every other hue here has a job it
- * never shares — ink is you, vermillion is money leaving, saffron is a settled
- * event — so the voice could not borrow one of them without saying two things
- * at once. This is deep enough to carry white text at 4.6:1 rather than the
- * pale pink that would fail it.
- */
+/* Pink is the voice's own colour, used nowhere else — ink, vermillion and
+   saffron each already mean something. Deep enough to carry white text
+   at 4.6:1. */
 :root { --voice:#D6336C; }
 
 .tr-badge {
@@ -44,8 +37,7 @@
 @keyframes tr-badge-in { from { opacity:0; transform:translateY(10px); } }
 @keyframes tr-pulse { 0%, 100% { opacity:1; } 50% { opacity:.35; } }
 
-/* The microphone being blocked is the one thing that needs saying out loud,
-   so it takes the error colour and the badge's place. */
+/* A blocked microphone takes the error colour and the badge's place. */
 .tr-hint {
   position:fixed; z-index:88;
   right:22px; bottom:22px;
@@ -141,7 +133,7 @@
   to   { transform:rotate(360deg) translate(5%, 3%); }
 }
 
-/* She stops swirling once she is doing rather than listening. */
+/* The orb settles once she is acting rather than listening. */
 .tr-orb--working .tr-blob, .tr-orb--done .tr-blob { animation-duration:1.6s; }
 .tr-orb--error .tr-blob.b, .tr-orb--error .tr-blob.c { opacity:0; }
 .tr-orb--error .tr-blob.a { filter:blur(4px); }

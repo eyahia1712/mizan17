@@ -8,10 +8,9 @@ import { Tick, External } from './Icons.jsx';
 /**
  * Sending needs two things: who, and how much.
  *
- * "Who" is an address — that is the only thing a Sui account can be identified
- * by. Saved recipients spare you typing it; a new one does not, and the address
- * is required before the amount is even worth asking for. Once a transfer goes
- * through, the address is saved, so it is typed exactly once.
+ * "Who" is a Sui address — the only thing that identifies an account on chain.
+ * Saved recipients spare you typing it. A new address is saved once the
+ * transfer goes through, so any address is typed exactly once.
  */
 export default function SendSheet({ close, preset, live, keypair, balance, spendable, onCommit }) {
   const [people, setPeople] = useState(() => loadRecipients());
@@ -24,8 +23,7 @@ export default function SendSheet({ close, preset, live, keypair, balance, spend
   const [sent, setSent] = useState(null);
   const [error, setError] = useState(null);
 
-  // In live mode the limit is what the account actually holds on chain, not
-  // what the demo balance says.
+  // In live mode the limit is what the account holds on chain, not the demo balance.
   const limit = live ? (spendable ?? 0) : balance;
 
   const target = useMemo(() => {
@@ -54,7 +52,7 @@ export default function SendSheet({ close, preset, live, keypair, balance, spend
         await new Promise((r) => setTimeout(r, 1200));
       }
 
-      // A recipient you have now paid is one you should not have to type again.
+      // Save an address you have now paid, so it is not typed twice.
       if (target.isNew) {
         saveRecipient({ name: target.name, address: target.address });
         setPeople(loadRecipients());
