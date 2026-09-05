@@ -1,8 +1,6 @@
 # Mizan
 
-**ميزان — the balance, the scales.**
-
-Money that follows you. A payment account for people who moved — built on Sui.
+**Money that follows you.** A payment account for people who moved — built on Sui.
 
 **Team Red Sea** · MUBA Blockchain Hackathon 2026 · Sui Foundation Track: Payments & Stablecoins
 
