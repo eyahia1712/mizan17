@@ -1,6 +1,6 @@
-# Mizan
+# Mizan — Money that follows you.
 
-**Money that follows you.** A payment account for people who moved — built on Sui.
+A payment account for people who moved, built on Sui.
 
 **Team Red Sea** · MUBA Blockchain Hackathon 2026 · Sui Foundation Track: Payments & Stablecoins
 
