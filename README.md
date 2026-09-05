@@ -7,7 +7,7 @@ Money that, follows you. A payment account for people who moved, built on Sui.
 | | |
 | --- | --- |
 | **Live demo** | **https://mizan17.vercel.app** — open it and sign in, nothing to install |
-| **Demo video** | _(add link before submitting)_ |
+| **Demo video** | https://www.youtube.com/watch?v=SBFsonfCmWs |
 | **Source** | https://github.com/eyahia1712/mizan17 |
 | **Network** | Sui testnet |
 | **Status** | Working prototype. No real money moves anywhere. |
