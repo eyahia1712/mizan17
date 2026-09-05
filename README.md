@@ -8,8 +8,9 @@ Money that follows you. A payment account for people who moved — built on Sui.
 
 | | |
 | --- | --- |
-| **Live demo** | `npm install && npm run dev` → http://localhost:5173 |
+| **Live demo** | **https://mizan17.vercel.app** — open it and sign in, nothing to install |
 | **Demo video** | _(add link before submitting)_ |
+| **Source** | https://github.com/eyahia1712/mizan17 |
 | **Network** | Sui testnet |
 | **Status** | Working prototype. No real money moves anywhere. |
 
@@ -168,13 +169,20 @@ Testnet coins have no monetary value. **No real money moves anywhere in this pro
 **To use Live mode:** open **Account** → turn on *Live transfers* → copy your address →
 fund it at [faucet.sui.io](https://faucet.sui.io) → send to any valid testnet address.
 
+This works on the deployed site as well as locally. There is no backend to run — the
+browser signs the transaction and submits it to the Sui fullnode itself.
+
 ## Setup and installation
 
-Requires **Node.js 18 or newer**.
+**Nothing to install.** The app is deployed and ready to use:
+
+### → https://mizan17.vercel.app
+
+To run it locally instead, you need **Node.js 18 or newer**:
 
 ```bash
-git clone <this-repo>
-cd Mizan
+git clone https://github.com/eyahia1712/mizan17.git
+cd mizan17
 npm install
 npm run dev
 ```
